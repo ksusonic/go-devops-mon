@@ -17,11 +17,21 @@ type updateRequest struct {
 	Value interface{}
 }
 
-func (s Server) parseUpdateURL(url string) (*updateRequest, *error) {
+const (
+	incorrectURLError = iota
+	parseValueError
+)
+
+type parseError struct {
+	err     error
+	errType int
+}
+
+func (s Server) parseUpdateURL(url string) (*updateRequest, *parseError) {
 	var args = strings.Split(strings.TrimPrefix(url, UpdateHandlerName), "/")
 	if len(args) < 3 {
 		err := fmt.Errorf("incorrect url: expected \"/update/<type>/<name>/<value>\"")
-		return nil, &err
+		return nil, &parseError{err, incorrectURLError}
 	}
 	result := updateRequest{}
 
@@ -30,7 +40,7 @@ func (s Server) parseUpdateURL(url string) (*updateRequest, *error) {
 		parsed, err := strconv.ParseFloat(args[2], 64)
 		if err != nil {
 			err := fmt.Errorf("error parsing value: %s", err)
-			return nil, &err
+			return nil, &parseError{err, parseValueError}
 		}
 		result.Value = parsed
 	} else if args[0] == metrics.CounterName {
@@ -38,16 +48,16 @@ func (s Server) parseUpdateURL(url string) (*updateRequest, *error) {
 		parsed, err := strconv.ParseInt(args[2], 10, 64)
 		if err != nil {
 			err := fmt.Errorf("error parsing value: %s", err)
-			return nil, &err
+			return nil, &parseError{err, parseValueError}
 		}
 		result.Value = parsed
 	} else {
 		err := fmt.Errorf("no such metric type")
-		return nil, &err
+		return nil, &parseError{err, incorrectURLError}
 	}
 	if !metrics.MetricExists(args[1]) {
 		err := fmt.Errorf("no such metric name")
-		return nil, &err
+		return nil, &parseError{err, incorrectURLError}
 	}
 	result.Name = args[1]
 
@@ -56,10 +66,20 @@ func (s Server) parseUpdateURL(url string) (*updateRequest, *error) {
 
 // UpdateMetric — обработчик обновления метрики по типу и названию
 func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	requestData, err := s.parseUpdateURL(r.URL.Path)
 	if err != nil {
-		log.Printf("%v", *err)
-		w.WriteHeader(404)
+		log.Printf("%v", (*err).err)
+		switch err.errType {
+		case parseValueError:
+			w.WriteHeader(http.StatusBadRequest)
+		case incorrectURLError:
+			w.WriteHeader(http.StatusNotFound)
+		}
 		return
 	}
 	if requestData.Type == metrics.GaugeName {

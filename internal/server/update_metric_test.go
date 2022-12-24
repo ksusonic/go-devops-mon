@@ -26,21 +26,35 @@ func TestServer_UpdateMetric(t *testing.T) {
 			name:    "simple test #1",
 			request: "/update/gauge/BuckHashSys/123.01",
 			want: want{
-				statusCode: 200,
+				statusCode: http.StatusOK,
 			},
 		},
 		{
 			name:    "unknown metric name test #2",
 			request: "/update/gauge/noSuchMetric/123.01",
 			want: want{
-				statusCode: 404,
+				statusCode: http.StatusNotFound,
 			},
 		},
 		{
-			name:    "unknown metric type test #2",
+			name:    "unknown metric type test #3",
 			request: "/update/superGauge/BuckHashSys/123.01",
 			want: want{
-				statusCode: 404,
+				statusCode: http.StatusNotFound,
+			},
+		},
+		{
+			name:    "no metric name #4",
+			request: "/update/counter/",
+			want: want{
+				statusCode: http.StatusNotFound,
+			},
+		},
+		{
+			name:    "no metric name #4",
+			request: "/update/counter/BuckHashSys/aaaa",
+			want: want{
+				statusCode: http.StatusBadRequest,
 			},
 		},
 	}
@@ -52,6 +66,8 @@ func TestServer_UpdateMetric(t *testing.T) {
 			h(w, request)
 
 			result := w.Result()
+			defer result.Body.Close()
+
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 		})
 	}
