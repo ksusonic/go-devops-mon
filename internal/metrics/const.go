@@ -5,15 +5,19 @@ const (
 	CounterName = "counter"
 )
 
-//type Gauge struct {
-//	Name  string
-//	Value float64
-//}
-//
-//type Counter struct {
-//	Name  string
-//	Value int64
-//}
+func MetricExists(metricName string) bool {
+	for _, name := range MetricTypeToName[GaugeName] {
+		if metricName == name {
+			return true
+		}
+	}
+	for _, name := range MetricTypeToName[CounterName] {
+		if metricName == name {
+			return true
+		}
+	}
+	return false
+}
 
 const (
 	Alloc         = "Alloc"

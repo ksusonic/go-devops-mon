@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/handlers"
+	"github.com/ksusonic/go-devops-mon/internal/server"
 	"log"
-	"net/http"
 )
 
 func main() {
-	http.HandleFunc(handlers.UpdateHandlerName, handlers.UpdateMetric)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	s := server.NewServer()
+	log.Fatal(s.Start())
 }

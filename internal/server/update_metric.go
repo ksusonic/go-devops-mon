@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"fmt"
@@ -11,16 +11,13 @@ import (
 
 const UpdateHandlerName = "/update/"
 
-var GaugeStorage = make(metrics.GaugeStorage)
-var CounterStorage = make(metrics.CounterStorage)
-
 type updateRequest struct {
 	Type  string
 	Name  string
 	Value interface{}
 }
 
-func parseUpdateURL(url string) (*updateRequest, *error) {
+func (s Server) parseUpdateURL(url string) (*updateRequest, *error) {
 	var args = strings.Split(strings.TrimPrefix(url, UpdateHandlerName), "/")
 	if len(args) < 3 {
 		err := fmt.Errorf("incorrect url: expected \"/update/<type>/<name>/<value>\"")
@@ -48,7 +45,7 @@ func parseUpdateURL(url string) (*updateRequest, *error) {
 		err := fmt.Errorf("no such metric type")
 		return nil, &err
 	}
-	if !metrics.HasMetricName(args[1]) {
+	if !metrics.MetricExists(args[1]) {
 		err := fmt.Errorf("no such metric name")
 		return nil, &err
 	}
@@ -58,21 +55,23 @@ func parseUpdateURL(url string) (*updateRequest, *error) {
 }
 
 // UpdateMetric — обработчик обновления метрики по типу и названию
-func UpdateMetric(w http.ResponseWriter, r *http.Request) {
-	requestData, err := parseUpdateURL(r.URL.Path)
+func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+	requestData, err := s.parseUpdateURL(r.URL.Path)
 	if err != nil {
 		log.Printf("%v", *err)
 		return
 	}
 	if requestData.Type == metrics.GaugeName {
-		GaugeStorage[requestData.Name] = append(GaugeStorage[requestData.Name], requestData.Value.(float64))
+		s.MemStorage.AddGaugeValue(requestData.Name, requestData.Value.(float64))
 		log.Printf("Updated gauge metrics: %f\n", requestData.Value.(float64))
 	} else if requestData.Type == metrics.CounterName {
-		CounterStorage[requestData.Name] = append(CounterStorage[requestData.Name], requestData.Value.(int64))
+		s.MemStorage.AddCounterValue(requestData.Name, requestData.Value.(int64))
 		log.Printf("Updated counter metrics: %d\n", requestData.Value.(int64))
 	} else {
 		log.Println("Unknown metric name!")
 		w.WriteHeader(404)
+		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 }
