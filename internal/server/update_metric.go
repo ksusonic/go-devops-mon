@@ -59,6 +59,7 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	requestData, err := s.parseUpdateURL(r.URL.Path)
 	if err != nil {
 		log.Printf("%v", *err)
+		w.WriteHeader(404)
 		return
 	}
 	if requestData.Type == metrics.GaugeName {
