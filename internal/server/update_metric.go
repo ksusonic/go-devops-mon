@@ -20,6 +20,7 @@ type updateRequest struct {
 const (
 	incorrectURLError = iota
 	parseValueError
+	noSuchMetricType
 )
 
 type parseError struct {
@@ -53,11 +54,7 @@ func (s Server) parseUpdateURL(url string) (*updateRequest, *parseError) {
 		result.Value = parsed
 	} else {
 		err := fmt.Errorf("no such metric type")
-		return nil, &parseError{err, incorrectURLError}
-	}
-	if !metrics.MetricExists(args[1]) {
-		err := fmt.Errorf("no such metric name")
-		return nil, &parseError{err, incorrectURLError}
+		return nil, &parseError{err, noSuchMetricType}
 	}
 	result.Name = args[1]
 
@@ -79,19 +76,20 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 		case incorrectURLError:
 			w.WriteHeader(http.StatusNotFound)
+		case noSuchMetricType:
+			w.WriteHeader(http.StatusNotImplemented)
+
 		}
 		return
 	}
 	if requestData.Type == metrics.GaugeName {
 		s.MemStorage.AddGaugeValue(requestData.Name, requestData.Value.(float64))
-		log.Printf("Updated gauge metrics: %f\n", requestData.Value.(float64))
+		log.Printf("Updated gauge %s: %f\n", requestData.Name, requestData.Value.(float64))
 	} else if requestData.Type == metrics.CounterName {
 		s.MemStorage.AddCounterValue(requestData.Name, requestData.Value.(int64))
-		log.Printf("Updated counter metrics: %d\n", requestData.Value.(int64))
+		log.Printf("Updated counter %s: %d\n", requestData.Name, requestData.Value.(int64))
 	} else {
-		log.Println("Unknown metric name!")
-		w.WriteHeader(404)
-		return
+		panic("unexpected metric type!")
 	}
 
 	w.WriteHeader(http.StatusOK)

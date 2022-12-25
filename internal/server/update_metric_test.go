@@ -33,14 +33,14 @@ func TestServer_UpdateMetric(t *testing.T) {
 			name:    "unknown metric name test #2",
 			request: "/update/gauge/noSuchMetric/123.01",
 			want: want{
-				statusCode: http.StatusNotFound,
+				statusCode: http.StatusOK,
 			},
 		},
 		{
 			name:    "unknown metric type test #3",
 			request: "/update/superGauge/BuckHashSys/123.01",
 			want: want{
-				statusCode: http.StatusNotFound,
+				statusCode: http.StatusNotImplemented,
 			},
 		},
 		{
