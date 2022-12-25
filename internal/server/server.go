@@ -12,9 +12,9 @@ type Server struct {
 }
 
 func (s Server) registerHandlers() {
-	s.Router.Route("/update", func(r chi.Router) {
-		r.Post("/{type}/{name}/{value}", s.UpdateMetric)
-	})
+	s.Router.Get("/", s.GetAllMetrics)
+	s.Router.Post("/update/{type}/{name}/{value}", s.UpdateMetric)
+	s.Router.Get("/value/{type}/{name}", s.GetMetric)
 }
 
 func NewServer() Server {

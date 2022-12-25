@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"math/rand"
 )
@@ -13,11 +14,70 @@ type MemStorage struct {
 	CounterStorage
 }
 
+func (m MemStorage) GetAllCurrentGaugeMetrics() map[string]float64 {
+	result := make(map[string]float64)
+	for name, value := range m.GaugeStorage {
+		if len(value) > 0 {
+			result[name] = value[len(value)-1]
+		} else {
+			result[name] = -1
+		}
+	}
+	return result
+}
+
+func (m MemStorage) GetAllCurrentCounterMetrics() map[string]int64 {
+	result := make(map[string]int64)
+	for name, value := range m.CounterStorage {
+		if len(value) > 0 {
+			result[name] = value[len(value)-1]
+		} else {
+			result[name] = -1
+		}
+	}
+	return result
+}
+
+func (s *GaugeStorage) GetCurrentGaugeMetric(name string) (float64, *error) {
+	val, ok := (*s)[name]
+	if !ok {
+		err := fmt.Errorf("no such metric")
+		return 0, &err
+	}
+	if len(val) > 0 {
+		current := val[len(val)-1]
+		return current, nil
+	} else {
+		err := fmt.Errorf("no values in metric %s", name)
+		return 0, &err
+	}
+}
+
+func (s *CounterStorage) GetCurrentCounterMetric(name string) (int64, *error) {
+	val, ok := (*s)[name]
+	if !ok {
+		err := fmt.Errorf("no such metric")
+		return 0, &err
+	}
+	if len(val) > 0 {
+		current := val[len(val)-1]
+		return current, nil
+	} else {
+		err := fmt.Errorf("no values in metric %s", name)
+		return 0, &err
+	}
+}
+
 func (s *GaugeStorage) AddGaugeValue(name string, value float64) {
 	(*s)[name] = append((*s)[name], value)
 }
-func (s *CounterStorage) AddCounterValue(name string, value int64) {
-	(*s)[name] = append((*s)[name], value)
+func (s *CounterStorage) AddToCounterValue(name string, value int64) {
+	if len((*s)[name]) > 0 {
+		lastValue := (*s)[name][len((*s)[name])-1]
+		(*s)[name] = append((*s)[name], lastValue+value)
+	} else {
+		(*s)[name] = []int64{value}
+	}
 }
 
 func (s *GaugeStorage) Alloc() []float64 {

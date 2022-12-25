@@ -24,20 +24,23 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 	return resp.StatusCode, string(respBody)
 }
 
-func TestServer(t *testing.T) {
+func TestServer_UpdateMetric(t *testing.T) {
 	s := NewServer()
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
+	//statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
+	//assert.Equal(t, http.StatusOK, statusCode)
+	//
+	//statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/noSuchMetric/123.01")
+	//assert.Equal(t, http.StatusOK, statusCode)
+	//
+	//statusCode, _ = testRequest(t, ts, "POST", "/update/superGauge/BuckHashSys/123.01")
+	//assert.Equal(t, http.StatusNotImplemented, statusCode)
+	//
+	//statusCode, _ = testRequest(t, ts, "POST", "/update/counter/")
+	//assert.Equal(t, http.StatusNotFound, statusCode)
+
+	statusCode, _ := testRequest(t, ts, "POST", "/update/counter/RandomValue/12345678")
 	assert.Equal(t, http.StatusOK, statusCode)
-
-	statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/noSuchMetric/123.01")
-	assert.Equal(t, http.StatusOK, statusCode)
-
-	statusCode, _ = testRequest(t, ts, "POST", "/update/superGauge/BuckHashSys/123.01")
-	assert.Equal(t, http.StatusNotImplemented, statusCode)
-
-	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/")
-	assert.Equal(t, http.StatusNotFound, statusCode)
 }

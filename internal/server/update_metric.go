@@ -35,11 +35,10 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Incorrect value: %s\n", requestData.RawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		log.Printf("Updated counter %s: %d\n", requestData.Name, value)
+		s.MemStorage.AddToCounterValue(requestData.Name, value)
+		log.Printf("Increased counter %s on: %d\n", requestData.Name, value)
 	} else {
 		log.Println("unexpected metric type!")
 		w.WriteHeader(http.StatusNotImplemented)
 	}
-
-	w.WriteHeader(http.StatusOK)
 }

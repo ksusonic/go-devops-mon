@@ -2,7 +2,13 @@ package storage
 
 type Storage interface {
 	AddGaugeValue(name string, value float64)
-	AddCounterValue(name string, value int64)
+	AddToCounterValue(name string, value int64)
+
+	GetCurrentGaugeMetric(name string) (float64, *error)
+	GetCurrentCounterMetric(name string) (int64, *error)
+
+	GetAllCurrentGaugeMetrics() map[string]float64
+	GetAllCurrentCounterMetrics() map[string]int64
 
 	Alloc() []float64
 	AddAlloc(v float64)
