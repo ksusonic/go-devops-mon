@@ -31,8 +31,6 @@ func (m MemStorage) GetAllCurrentCounterMetrics() map[string]int64 {
 	for name, value := range m.CounterStorage {
 		if len(value) > 0 {
 			result[name] = value[len(value)-1]
-		} else {
-			result[name] = -1
 		}
 	}
 	return result
