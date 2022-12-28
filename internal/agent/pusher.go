@@ -3,39 +3,34 @@ package agent
 import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
-	"net/http"
 	"strconv"
 )
 
 const contentType = "text/plain"
 
-var client = http.Client{}
+func (m MetricCollector) makePushURL(metricName string, metricValue string) string {
+	return "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) +
+		"/update/" + metrics.GaugeName + "/" + metricName + "/" + metricValue
+}
+
+func (m MetricCollector) sendMetric(path string) {
+	response, err := m.Client.Post(path, contentType, nil)
+	if err != nil {
+		log.Printf("Error sending push metric request: %v\n", err)
+	} else {
+		response.Body.Close()
+	}
+}
 
 func (m MetricCollector) PushMetrics() {
 	for metricName, metricValue := range m.Storage.GaugeMetricStorage {
-		var path = "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) + "/update/" +
-			metrics.GaugeName + "/" +
-			metricName + "/" +
-			strconv.FormatFloat(metricValue, 'f', -1, 64)
-
-		response, err := client.Post(path, contentType, nil)
-		if err != nil {
-			log.Printf("Error sending post request: %v\n", err)
-			continue
-		}
-		response.Body.Close()
+		stringMetricValue := strconv.FormatFloat(metricValue, 'f', -1, 64)
+		var path = m.makePushURL(metricName, stringMetricValue)
+		m.sendMetric(path)
 	}
 	for metricName, metricValue := range m.Storage.CounterMetricStorage {
-		var path = "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) + "/update/" +
-			metrics.CounterName + "/" +
-			metricName + "/" +
-			strconv.FormatInt(metricValue, 10)
-
-		response, err := client.Post(path, contentType, nil)
-		if err != nil {
-			log.Printf("Error sending post request: %v\n", err)
-			continue
-		}
-		response.Body.Close()
+		stringMetricValue := strconv.FormatInt(metricValue, 10)
+		var path = m.makePushURL(metricName, stringMetricValue)
+		m.sendMetric(path)
 	}
 }

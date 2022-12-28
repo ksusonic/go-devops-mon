@@ -2,6 +2,7 @@ package agent
 
 import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"net/http"
 	"runtime"
 	"time"
 )
@@ -12,6 +13,7 @@ type MetricCollector struct {
 	PushChan    <-chan time.Time
 	ServerHost  string
 	ServerPort  int
+	Client      http.Client
 }
 
 func MakeMetricCollector(
@@ -26,6 +28,7 @@ func MakeMetricCollector(
 		PushChan:    time.NewTicker(pushInterval).C,
 		ServerHost:  serverHost,
 		ServerPort:  serverPort,
+		Client:      http.Client{},
 	}
 }
 
