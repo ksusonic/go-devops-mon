@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/server"
 	"log"
+
+	"github.com/ksusonic/go-devops-mon/internal/server"
 )
 
 func main() {

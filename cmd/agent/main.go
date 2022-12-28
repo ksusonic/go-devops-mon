@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/agent"
 	"log"
 	"time"
+
+	"github.com/ksusonic/go-devops-mon/internal/agent"
 )
 
 const (

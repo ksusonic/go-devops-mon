@@ -1,9 +1,11 @@
 package storage
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCounterStorage_AddCounterValue(t *testing.T) {

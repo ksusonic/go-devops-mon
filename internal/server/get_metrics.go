@@ -2,11 +2,13 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type getRequest struct {

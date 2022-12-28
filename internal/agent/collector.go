@@ -1,10 +1,11 @@
 package agent
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type MetricCollector struct {

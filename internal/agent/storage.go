@@ -1,8 +1,9 @@
 package agent
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"math/rand"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type GaugeMetrics map[string]float64

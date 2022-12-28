@@ -1,9 +1,11 @@
 package server
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/ksusonic/go-devops-mon/internal/storage"
 	"net/http"
+
+	"github.com/ksusonic/go-devops-mon/internal/storage"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {

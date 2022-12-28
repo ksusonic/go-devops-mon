@@ -1,9 +1,10 @@
 package agent
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
 	"strconv"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 const contentType = "text/plain"

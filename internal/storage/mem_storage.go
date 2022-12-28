@@ -2,8 +2,9 @@ package storage
 
 import (
 	"fmt"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"math/rand"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type GaugeStorage map[string][]float64
