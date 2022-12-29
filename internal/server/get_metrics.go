@@ -21,30 +21,22 @@ func (s Server) GetMetric(w http.ResponseWriter, r *http.Request) {
 		Type: chi.URLParam(r, "type"),
 		Name: chi.URLParam(r, "name"),
 	}
-	if requestData.Type == metrics.GaugeName {
-		value, err := s.MemStorage.GetCurrentGaugeMetric(requestData.Name)
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Write([]byte(strconv.FormatFloat(value, 'f', -1, 64)))
-	} else if requestData.Type == metrics.CounterName {
-		value, err := s.MemStorage.GetCurrentCounterMetric(requestData.Name)
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Write([]byte(strconv.FormatInt(value, 10)))
-	} else {
-		log.Println("unexpected metric type!")
-		w.WriteHeader(http.StatusNotImplemented)
+	value, err := s.Storage.GetMetric(requestData.Name)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
+	var stringValue string
+	if requestData.Type == metrics.CounterType {
+		stringValue = strconv.FormatInt(value.Value.(int64), 10)
+	} else {
+		stringValue = strconv.FormatFloat(value.Value.(float64), 'f', -1, 64)
+	}
+	w.Write([]byte(stringValue))
 }
 
 func (s Server) GetAllMetrics(w http.ResponseWriter, _ *http.Request) {
-	result := make(map[string]interface{})
-	result["gauge"] = s.MemStorage.GetAllCurrentGaugeMetrics()
-	result["counter"] = s.MemStorage.GetAllCurrentCounterMetrics()
+	result := s.Storage.GetMappedByTypeAndNameMetrics()
 	marshall, err := json.Marshal(result)
 	if err != nil {
 		log.Fatal(err)

@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/storage"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,22 +28,23 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 }
 
 func TestServer_UpdateMetric(t *testing.T) {
-	s := NewServer()
+	memStorage := storage.NewMemStorage()
+	s := NewServer(&memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
-	//statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
-	//assert.Equal(t, http.StatusOK, statusCode)
-	//
-	//statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/noSuchMetric/123.01")
-	//assert.Equal(t, http.StatusOK, statusCode)
-	//
-	//statusCode, _ = testRequest(t, ts, "POST", "/update/superGauge/BuckHashSys/123.01")
-	//assert.Equal(t, http.StatusNotImplemented, statusCode)
-	//
-	//statusCode, _ = testRequest(t, ts, "POST", "/update/counter/")
-	//assert.Equal(t, http.StatusNotFound, statusCode)
+	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
+	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/counter/RandomValue/12345678")
+	statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/noSuchMetric/123.01")
+	assert.Equal(t, http.StatusOK, statusCode)
+
+	statusCode, _ = testRequest(t, ts, "POST", "/update/superGauge/BuckHashSys/123.01")
+	assert.Equal(t, http.StatusNotImplemented, statusCode)
+
+	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/")
+	assert.Equal(t, http.StatusNotFound, statusCode)
+
+	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/RandomValue/12345678")
 	assert.Equal(t, http.StatusOK, statusCode)
 }

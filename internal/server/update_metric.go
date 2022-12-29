@@ -23,21 +23,29 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		Name:     chi.URLParam(r, "name"),
 		RawValue: chi.URLParam(r, "value"),
 	}
-	if requestData.Type == metrics.GaugeName {
+	if requestData.Type == metrics.GaugeType {
 		value, err := strconv.ParseFloat(requestData.RawValue, 64)
 		if err != nil {
 			log.Printf("Incorrect value: %s\n", requestData.RawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		s.MemStorage.AddGaugeValue(requestData.Name, value)
+		s.Storage.SetMetric(metrics.AtomicMetric{
+			Name:  requestData.Name,
+			Type:  requestData.Type,
+			Value: value,
+		})
 		log.Printf("Updated gauge %s: %f\n", requestData.Name, value)
-	} else if requestData.Type == metrics.CounterName {
+	} else if requestData.Type == metrics.CounterType {
 		value, err := strconv.ParseInt(requestData.RawValue, 10, 64)
 		if err != nil {
 			log.Printf("Incorrect value: %s\n", requestData.RawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		s.MemStorage.AddToCounterValue(requestData.Name, value)
+		s.Storage.SetMetric(metrics.AtomicMetric{
+			Name:  requestData.Name,
+			Type:  requestData.Type,
+			Value: value,
+		})
 		log.Printf("Increased counter %s on: %d\n", requestData.Name, value)
 	} else {
 		log.Println("unexpected metric type!")

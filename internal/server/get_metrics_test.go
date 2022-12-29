@@ -5,11 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/storage"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestServer_GetMetric(t *testing.T) {
-	s := NewServer()
+	memStorage := storage.NewMemStorage()
+	s := NewServer(&memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -22,7 +25,8 @@ func TestServer_GetMetric(t *testing.T) {
 }
 
 func TestServer_GetAllMetrics(t *testing.T) {
-	s := NewServer()
+	memStorage := storage.NewMemStorage()
+	s := NewServer(&memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 

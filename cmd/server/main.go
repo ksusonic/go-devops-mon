@@ -4,10 +4,11 @@ import (
 	"log"
 
 	"github.com/ksusonic/go-devops-mon/internal/server"
+	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
 func main() {
-	s := server.NewServer()
-	log.Println("Server started")
+	memStorage := storage.NewMemStorage()
+	s := server.NewServer(&memStorage)
 	log.Fatal(s.Start())
 }

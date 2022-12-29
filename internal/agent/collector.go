@@ -9,7 +9,7 @@ import (
 )
 
 type MetricCollector struct {
-	Storage     CollectorStorage
+	Storage     metrics.MetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
 	ServerHost  string
@@ -18,13 +18,14 @@ type MetricCollector struct {
 }
 
 func MakeMetricCollector(
+	storage metrics.MetricStorage,
 	collectInterval time.Duration,
 	pushInterval time.Duration,
 	serverHost string,
 	serverPort int,
 ) MetricCollector {
 	return MetricCollector{
-		Storage:     NewCollectorStorage(),
+		Storage:     storage,
 		CollectChan: time.NewTicker(collectInterval).C,
 		PushChan:    time.NewTicker(pushInterval).C,
 		ServerHost:  serverHost,
@@ -37,34 +38,142 @@ func (m MetricCollector) CollectStat() {
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
 
-	m.Storage.GaugeMetricStorage[metrics.Alloc] = float64(rtm.Alloc)
-	m.Storage.GaugeMetricStorage[metrics.BuckHashSys] = float64(rtm.BuckHashSys)
-	m.Storage.GaugeMetricStorage[metrics.Frees] = float64(rtm.Frees)
-	m.Storage.GaugeMetricStorage[metrics.GccpuFraction] = rtm.GCCPUFraction
-	m.Storage.GaugeMetricStorage[metrics.GcSys] = float64(rtm.GCSys)
-	m.Storage.GaugeMetricStorage[metrics.HeapAlloc] = float64(rtm.HeapAlloc)
-	m.Storage.GaugeMetricStorage[metrics.HeapIdle] = float64(rtm.HeapIdle)
-	m.Storage.GaugeMetricStorage[metrics.HeapInuse] = float64(rtm.HeapInuse)
-	m.Storage.GaugeMetricStorage[metrics.HeapObjects] = float64(rtm.HeapObjects)
-	m.Storage.GaugeMetricStorage[metrics.HeapReleased] = float64(rtm.HeapReleased)
-	m.Storage.GaugeMetricStorage[metrics.HeapSys] = float64(rtm.HeapSys)
-	m.Storage.GaugeMetricStorage[metrics.LastGC] = float64(rtm.LastGC)
-	m.Storage.GaugeMetricStorage[metrics.Lookups] = float64(rtm.Lookups)
-	m.Storage.GaugeMetricStorage[metrics.MCacheInuse] = float64(rtm.MCacheInuse)
-	m.Storage.GaugeMetricStorage[metrics.MCacheSys] = float64(rtm.MCacheSys)
-	m.Storage.GaugeMetricStorage[metrics.MSpanInuse] = float64(rtm.MSpanInuse)
-	m.Storage.GaugeMetricStorage[metrics.MSpanSys] = float64(rtm.MSpanSys)
-	m.Storage.GaugeMetricStorage[metrics.Mallocs] = float64(rtm.Mallocs)
-	m.Storage.GaugeMetricStorage[metrics.NextGC] = float64(rtm.NextGC)
-	m.Storage.GaugeMetricStorage[metrics.NumForcedGC] = float64(rtm.NumForcedGC)
-	m.Storage.GaugeMetricStorage[metrics.NumGC] = float64(rtm.NumGC)
-	m.Storage.GaugeMetricStorage[metrics.OtherSys] = float64(rtm.OtherSys)
-	m.Storage.GaugeMetricStorage[metrics.PauseTotalNs] = float64(rtm.PauseTotalNs)
-	m.Storage.GaugeMetricStorage[metrics.StackInuse] = float64(rtm.StackInuse)
-	m.Storage.GaugeMetricStorage[metrics.StackSys] = float64(rtm.StackSys)
-	m.Storage.GaugeMetricStorage[metrics.Sys] = float64(rtm.Sys)
-	m.Storage.GaugeMetricStorage[metrics.TotalAlloc] = float64(rtm.TotalAlloc)
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.Alloc,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.Alloc),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.BuckHashSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.BuckHashSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.Frees,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.Frees),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.GccpuFraction,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.GCCPUFraction),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.GcSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.GCSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapAlloc,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapAlloc),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapIdle,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapIdle),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapInuse,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapInuse),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapObjects,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapObjects),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapReleased,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapReleased),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.HeapSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.HeapSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.LastGC,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.LastGC),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.Lookups,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.Lookups),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.MCacheInuse,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.MCacheInuse),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.MCacheSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.MCacheSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.MSpanInuse,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.MSpanInuse),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.MSpanSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.MSpanSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.Mallocs,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.Mallocs),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.NextGC,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.NextGC),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.NumForcedGC,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.NumForcedGC),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.NumGC,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.NumGC),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.OtherSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.OtherSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.PauseTotalNs,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.PauseTotalNs),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.StackInuse,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.StackInuse),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.StackSys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.StackSys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.Sys,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.Sys),
+	})
+	m.Storage.SetMetric(metrics.AtomicMetric{
+		Name:  metrics.TotalAlloc,
+		Type:  metrics.GaugeType,
+		Value: float64(rtm.TotalAlloc),
+	})
 
-	m.Storage.CounterMetricStorage.IncPollCountValue()
-	m.Storage.CounterMetricStorage.RandomizeRandomValue()
+	m.Storage.IncPollCount()
+	m.Storage.RandomizeRandomValue()
 }

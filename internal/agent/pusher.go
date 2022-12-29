@@ -11,7 +11,7 @@ const contentType = "text/plain"
 
 func (m MetricCollector) makePushURL(metricName string, metricValue string) string {
 	return "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) +
-		"/update/" + metrics.GaugeName + "/" + metricName + "/" + metricValue
+		"/update/" + metrics.GaugeType + "/" + metricName + "/" + metricValue
 }
 
 func (m MetricCollector) sendMetric(path string) {
@@ -24,14 +24,18 @@ func (m MetricCollector) sendMetric(path string) {
 }
 
 func (m MetricCollector) PushMetrics() {
-	for metricName, metricValue := range m.Storage.GaugeMetricStorage {
-		stringMetricValue := strconv.FormatFloat(metricValue, 'f', -1, 64)
-		var path = m.makePushURL(metricName, stringMetricValue)
-		m.sendMetric(path)
-	}
-	for metricName, metricValue := range m.Storage.CounterMetricStorage {
-		stringMetricValue := strconv.FormatInt(metricValue, 10)
-		var path = m.makePushURL(metricName, stringMetricValue)
+	for _, metric := range m.Storage.GetAllMetrics() {
+		var stringMetricValue string
+		if metric.Type == metrics.GaugeType {
+			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
+		} else if metric.Type == metrics.CounterType {
+			stringMetricValue = strconv.FormatInt(metric.Value.(int64), 10)
+		} else {
+			log.Printf("Unknown metric type: %s\n", metric.Type)
+			// using float as default value
+			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
+		}
+		var path = m.makePushURL(metric.Name, stringMetricValue)
 		m.sendMetric(path)
 	}
 }

@@ -1,57 +1,45 @@
 package metrics
 
-const (
-	GaugeName   = "gauge"
-	CounterName = "counter"
+import (
+	"fmt"
+	"strconv"
 )
 
-type GaugeMetric struct {
+type AtomicMetric struct {
 	Name  string
-	Value float64
-}
-
-type CounterMetric struct {
-	Name  string
-	Value int64
+	Type  string
+	Value interface{}
 }
 
 type MetricStorage interface {
-	AddGaugeMetric(m GaugeMetric)
-	AddCounterMetric(m CounterMetric)
+	// SetMetric Set value to metric
+	SetMetric(metric AtomicMetric)
 
-	GetGaugeMetrics(name string) []float64
-	GetCounterMetrics(name string) []int64
+	// GetMetric Get metric or error
+	GetMetric(name string) (AtomicMetric, error)
+	// GetAllMetrics Get all metrics as slice
+	GetAllMetrics() []AtomicMetric
+	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
+	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
+
+	// IncPollCount Increases field PollCount by 1
+	IncPollCount()
+	// RandomizeRandomValue Set RandomValue to random number
+	RandomizeRandomValue()
 }
 
-const (
-	Alloc         = "Alloc"
-	BuckHashSys   = "BuckHashSys"
-	Frees         = "Frees"
-	GccpuFraction = "GCCPUFraction"
-	GcSys         = "GCSys"
-	HeapAlloc     = "HeapAlloc"
-	HeapIdle      = "HeapIdle"
-	HeapInuse     = "HeapInuse"
-	HeapObjects   = "HeapObjects"
-	HeapReleased  = "HeapReleased"
-	HeapSys       = "HeapSys"
-	LastGC        = "LastGC"
-	Lookups       = "Lookups"
-	MCacheInuse   = "MCacheInuse"
-	MCacheSys     = "MCacheSys"
-	MSpanInuse    = "MSpanInuse"
-	MSpanSys      = "MSpanSys"
-	Mallocs       = "Mallocs"
-	NextGC        = "NextGC"
-	NumForcedGC   = "NumForcedGC"
-	NumGC         = "NumGC"
-	OtherSys      = "OtherSys"
-	PauseTotalNs  = "PauseTotalNs"
-	StackInuse    = "StackInuse"
-	StackSys      = "StackSys"
-	Sys           = "Sys"
-	TotalAlloc    = "TotalAlloc"
-
-	PollCount   = "PollCount"
-	RandomValue = "RandomValue"
-)
+func (am AtomicMetric) GetStringValue() (string, error) {
+	var stringValue string
+	switch am.Value.(type) {
+	case float64:
+		stringValue = strconv.FormatFloat(am.Value.(float64), 'f', -1, 64)
+	case int64:
+		stringValue = strconv.FormatInt(am.Value.(int64), 10)
+	case string:
+		stringValue = am.Value.(string)
+	default:
+		err := fmt.Errorf("unknown metric type: %s", am.Type)
+		return "", err
+	}
+	return stringValue, nil
+}

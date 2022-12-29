@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/agent"
+	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
 const (
@@ -15,7 +16,8 @@ const (
 )
 
 func main() {
-	collector := agent.MakeMetricCollector(CollectInterval, PushInterval, ServerHost, ServerPort)
+	memStorage := storage.NewMemStorage()
+	collector := agent.MakeMetricCollector(&memStorage, CollectInterval, PushInterval, ServerHost, ServerPort)
 	for {
 		select {
 		case <-collector.CollectChan:

@@ -1,16 +1,17 @@
 package server
 
 import (
+	"log"
 	"net/http"
 
-	"github.com/ksusonic/go-devops-mon/internal/storage"
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	MemStorage storage.Storage
-	Router     chi.Router
+	Storage metrics.MetricStorage
+	Router  chi.Router
 }
 
 func (s Server) registerHandlers() {
@@ -19,18 +20,16 @@ func (s Server) registerHandlers() {
 	s.Router.Get("/value/{type}/{name}", s.GetMetric)
 }
 
-func NewServer() Server {
+func NewServer(storage metrics.MetricStorage) Server {
 	s := Server{
-		MemStorage: &storage.MemStorage{
-			GaugeStorage:   storage.GaugeStorage{},
-			CounterStorage: storage.CounterStorage{},
-		},
-		Router: chi.NewRouter(),
+		Storage: storage,
+		Router:  chi.NewRouter(),
 	}
 	s.registerHandlers()
 	return s
 }
 
 func (s Server) Start() error {
+	log.Println("Server started")
 	return http.ListenAndServe("127.0.0.1:8080", s.Router)
 }

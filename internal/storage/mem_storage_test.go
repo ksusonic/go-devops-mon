@@ -6,91 +6,66 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCounterStorage_AddCounterValue(t *testing.T) {
-	type args struct {
-		name       string
-		value      int64
-		checkIndex int
-		expected   int64
-	}
+func TestMemStorage_IncPollCount(t *testing.T) {
 	tests := []struct {
-		name string
-		s    CounterStorage
-		args args
+		name       string
+		memStorage MemStorage
 	}{
 		{
-			name: "simple test #1",
-			s: CounterStorage{
-				metrics.RandomValue: {1, 2, 3},
-			},
-			args: args{
-				name:       metrics.RandomValue,
-				value:      7,
-				checkIndex: 3,
-				expected:   10,
-			},
-		},
-		{
-			name: "add to empty test #2",
-			s: CounterStorage{
-				metrics.RandomValue: {},
-			},
-			args: args{
-				name:       metrics.RandomValue,
-				value:      1,
-				checkIndex: 0,
-				expected:   1,
-			},
+			name:       "add to empty test",
+			memStorage: NewMemStorage(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.s.AddToCounterValue(tt.args.name, tt.args.value)
-			assert.Equal(t, tt.args.expected, tt.s[tt.args.name][tt.args.checkIndex])
+			_, err := tt.memStorage.GetMetric(metrics.PollCount)
+			require.Error(t, err)
+
+			tt.memStorage.SetMetric(metrics.AtomicMetric{
+				Name:  metrics.PollCount,
+				Type:  metrics.CounterType,
+				Value: int64(1),
+			})
+			value, err := tt.memStorage.GetMetric(metrics.PollCount)
+			require.NoError(t, err)
+			require.NotNil(t, value, "value from storage is nil")
+			var expected int64 = 1
+			require.IsType(t, expected, value.Value)
+			assert.Equal(t, expected, value.Value)
 		})
 	}
 }
 
-func TestGaugeStorage_AddGaugeValue(t *testing.T) {
-	type args struct {
-		name       string
-		value      float64
-		checkIndex int
-	}
+func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
+
 	tests := []struct {
-		name string
-		s    GaugeStorage
-		args args
+		name       string
+		memStorage MemStorage
+		args       metrics.AtomicMetric
 	}{
 		{
-			name: "simple test #1",
-			s: GaugeStorage{
-				metrics.PauseTotalNs: {1.001, 2.0003, 3.123},
-			},
-			args: args{
-				name:       metrics.PauseTotalNs,
-				value:      7.0003,
-				checkIndex: 3,
-			},
-		},
-		{
-			name: "add to empty test #2",
-			s: GaugeStorage{
-				metrics.PauseTotalNs: {},
-			},
-			args: args{
-				name:       metrics.PauseTotalNs,
-				value:      1.123456,
-				checkIndex: 0,
+			name:       "simple test #1",
+			memStorage: NewMemStorage(),
+			args: metrics.AtomicMetric{
+				Name:  metrics.PauseTotalNs,
+				Type:  metrics.GaugeType,
+				Value: 7.0023,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.s.AddGaugeValue(tt.args.name, tt.args.value)
-			assert.Equal(t, tt.args.value, tt.s[tt.args.name][tt.args.checkIndex])
+			_, err := tt.memStorage.GetMetric(tt.args.Name)
+			require.Error(t, err)
+
+			tt.memStorage.SetMetric(tt.args)
+			result, err := tt.memStorage.GetMetric(tt.args.Name)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			assert.Equal(t, tt.args, result)
 		})
 	}
 }
