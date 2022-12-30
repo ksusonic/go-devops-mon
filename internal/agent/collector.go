@@ -17,14 +17,14 @@ type MetricCollector struct {
 	Client      http.Client
 }
 
-func MakeMetricCollector(
+func NewMetricCollector(
 	storage metrics.MetricStorage,
 	collectInterval time.Duration,
 	pushInterval time.Duration,
 	serverHost string,
 	serverPort int,
-) MetricCollector {
-	return MetricCollector{
+) *MetricCollector {
+	return &MetricCollector{
 		Storage:     storage,
 		CollectChan: time.NewTicker(collectInterval).C,
 		PushChan:    time.NewTicker(pushInterval).C,

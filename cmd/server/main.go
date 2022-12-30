@@ -9,6 +9,6 @@ import (
 
 func main() {
 	memStorage := storage.NewMemStorage()
-	s := server.NewServer(&memStorage)
+	s := server.NewServer(memStorage)
 	log.Fatal(s.Start())
 }

@@ -17,7 +17,7 @@ const (
 
 func main() {
 	memStorage := storage.NewMemStorage()
-	collector := agent.MakeMetricCollector(&memStorage, CollectInterval, PushInterval, ServerHost, ServerPort)
+	collector := agent.NewMetricCollector(memStorage, CollectInterval, PushInterval, ServerHost, ServerPort)
 	for {
 		select {
 		case <-collector.CollectChan:

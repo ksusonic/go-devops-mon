@@ -11,8 +11,8 @@ type MemStorage struct {
 	nameMapping map[string]metrics.AtomicMetric
 }
 
-func NewMemStorage() MemStorage {
-	return MemStorage{
+func NewMemStorage() *MemStorage {
+	return &MemStorage{
 		nameMapping: make(map[string]metrics.AtomicMetric),
 	}
 }

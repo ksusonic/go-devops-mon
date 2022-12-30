@@ -20,8 +20,8 @@ func (s Server) registerHandlers() {
 	s.Router.Get("/value/{type}/{name}", s.GetMetric)
 }
 
-func NewServer(storage metrics.MetricStorage) Server {
-	s := Server{
+func NewServer(storage metrics.MetricStorage) *Server {
+	s := &Server{
 		Storage: storage,
 		Router:  chi.NewRouter(),
 	}
