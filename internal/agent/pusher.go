@@ -9,9 +9,9 @@ import (
 
 const contentType = "text/plain"
 
-func (m MetricCollector) makePushURL(metricName string, metricValue string) string {
+func (m MetricCollector) makePushURL(metricName, metricType, metricValue string) string {
 	return "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) +
-		"/update/" + metrics.GaugeType + "/" + metricName + "/" + metricValue
+		"/update/" + metricType + "/" + metricName + "/" + metricValue
 }
 
 func (m MetricCollector) sendMetric(path string) {
@@ -35,7 +35,7 @@ func (m MetricCollector) PushMetrics() {
 			// using float as default value
 			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
 		}
-		var path = m.makePushURL(metric.Name, stringMetricValue)
+		var path = m.makePushURL(metric.Name, metric.Type, stringMetricValue)
 		m.sendMetric(path)
 	}
 }

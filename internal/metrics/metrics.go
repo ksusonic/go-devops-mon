@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+const (
+	GaugeType   = "gauge"
+	CounterType = "counter"
+)
+
 type AtomicMetric struct {
 	Name  string
 	Type  string
@@ -13,12 +18,15 @@ type AtomicMetric struct {
 
 type MetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(metric AtomicMetric)
+	SetMetric(AtomicMetric)
+	AddMetrics([]AtomicMetric)
 
 	// GetMetric Get metric or error
 	GetMetric(name string) (AtomicMetric, error)
 	// GetAllMetrics Get all metrics as slice
 	GetAllMetrics() []AtomicMetric
+	// GetAllTypedMetrics Get all metrics by specific type
+	GetAllTypedMetrics(type_ string) []AtomicMetric
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 

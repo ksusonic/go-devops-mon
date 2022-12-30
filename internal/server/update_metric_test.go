@@ -29,7 +29,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 
 func TestServer_UpdateMetric(t *testing.T) {
 	memStorage := storage.NewMemStorage()
-	s := NewServer(&memStorage)
+	s := NewServer(memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 

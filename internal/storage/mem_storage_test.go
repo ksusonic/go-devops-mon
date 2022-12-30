@@ -12,7 +12,7 @@ import (
 func TestMemStorage_IncPollCount(t *testing.T) {
 	tests := []struct {
 		name       string
-		memStorage MemStorage
+		memStorage *MemStorage
 	}{
 		{
 			name:       "add to empty test",
@@ -21,15 +21,15 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(metrics.PollCount)
+			_, err := tt.memStorage.GetMetric("PollCount")
 			require.Error(t, err)
 
 			tt.memStorage.SetMetric(metrics.AtomicMetric{
-				Name:  metrics.PollCount,
+				Name:  "PollCount",
 				Type:  metrics.CounterType,
 				Value: int64(1),
 			})
-			value, err := tt.memStorage.GetMetric(metrics.PollCount)
+			value, err := tt.memStorage.GetMetric("PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
 			var expected int64 = 1
@@ -43,14 +43,14 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		memStorage MemStorage
+		memStorage *MemStorage
 		args       metrics.AtomicMetric
 	}{
 		{
 			name:       "simple test #1",
 			memStorage: NewMemStorage(),
 			args: metrics.AtomicMetric{
-				Name:  metrics.PauseTotalNs,
+				Name:  "PauseTotalNs",
 				Type:  metrics.GaugeType,
 				Value: 7.0023,
 			},

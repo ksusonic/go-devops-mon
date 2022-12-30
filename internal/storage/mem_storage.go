@@ -32,7 +32,12 @@ func (m *MemStorage) SetMetric(metric metrics.AtomicMetric) {
 	} else {
 		(*m).nameMapping[metric.Name] = metric
 	}
+}
 
+func (m *MemStorage) AddMetrics(atomicMetrics []metrics.AtomicMetric) {
+	for i := range atomicMetrics {
+		m.SetMetric(atomicMetrics[i])
+	}
 }
 
 func (m *MemStorage) GetMetric(name string) (metrics.AtomicMetric, error) {
@@ -52,6 +57,16 @@ func (m *MemStorage) GetAllMetrics() []metrics.AtomicMetric {
 	return result
 }
 
+func (m *MemStorage) GetAllTypedMetrics(type_ string) []metrics.AtomicMetric {
+	var result []metrics.AtomicMetric
+	for _, m := range m.nameMapping {
+		if m.Type == type_ {
+			result = append(result, m)
+		}
+	}
+	return result
+}
+
 func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]interface{} {
 	res := make(map[string]map[string]interface{})
 	for _, m := range m.nameMapping {
@@ -65,21 +80,21 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 }
 
 func (m *MemStorage) IncPollCount() {
-	metric, ok := (*m).nameMapping[metrics.PollCount]
+	metric, ok := (*m).nameMapping["PollCount"]
 	var previousValue int64 = 0
 	if ok {
 		previousValue = metric.Value.(int64)
 	}
 
-	(*m).nameMapping[metrics.PollCount] = metrics.AtomicMetric{
-		Name:  metrics.PollCount,
+	(*m).nameMapping["PollCount"] = metrics.AtomicMetric{
+		Name:  "PollCount",
 		Type:  metrics.CounterType,
-		Value: previousValue,
+		Value: previousValue + 1,
 	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	(*m).nameMapping[metrics.RandomValue] = metrics.AtomicMetric{
-		Name:  metrics.RandomValue,
+	(*m).nameMapping["RandomValue"] = metrics.AtomicMetric{
+		Name:  "RandomValue",
 		Type:  metrics.CounterType,
 		Value: rand.Int63(),
 	}

@@ -12,7 +12,7 @@ import (
 
 func TestServer_GetMetric(t *testing.T) {
 	memStorage := storage.NewMemStorage()
-	s := NewServer(&memStorage)
+	s := NewServer(memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
@@ -26,7 +26,7 @@ func TestServer_GetMetric(t *testing.T) {
 
 func TestServer_GetAllMetrics(t *testing.T) {
 	memStorage := storage.NewMemStorage()
-	s := NewServer(&memStorage)
+	s := NewServer(memStorage)
 	ts := httptest.NewServer(s.Router)
 	defer ts.Close()
 
