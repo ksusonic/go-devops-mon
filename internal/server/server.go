@@ -5,27 +5,21 @@ import (
 	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"github.com/ksusonic/go-devops-mon/internal/server/router"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
 	Storage metrics.MetricStorage
-	Router  chi.Router
-}
-
-func (s Server) registerHandlers() {
-	s.Router.Get("/", s.GetAllMetrics)
-	s.Router.Post("/update/{type}/{name}/{value}", s.UpdateMetric)
-	s.Router.Get("/value/{type}/{name}", s.GetMetric)
+	Router  *chi.Mux
 }
 
 func NewServer(storage metrics.MetricStorage) *Server {
 	s := &Server{
 		Storage: storage,
-		Router:  chi.NewRouter(),
 	}
-	s.registerHandlers()
+	s.Router = router.NewRouter(&s.Storage)
 	return s
 }
 

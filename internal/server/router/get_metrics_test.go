@@ -1,19 +1,20 @@
-package server
+package router
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestServer_GetMetric(t *testing.T) {
-	memStorage := storage.NewMemStorage()
-	s := NewServer(memStorage)
-	ts := httptest.NewServer(s.Router)
+	var memStorage metrics.MetricStorage = storage.NewMemStorage()
+	r := NewRouter(&memStorage)
+	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
@@ -25,9 +26,9 @@ func TestServer_GetMetric(t *testing.T) {
 }
 
 func TestServer_GetAllMetrics(t *testing.T) {
-	memStorage := storage.NewMemStorage()
-	s := NewServer(memStorage)
-	ts := httptest.NewServer(s.Router)
+	var memStorage metrics.MetricStorage = storage.NewMemStorage()
+	r := NewRouter(&memStorage)
+	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	for _, request := range []string{

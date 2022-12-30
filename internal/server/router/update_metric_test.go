@@ -1,4 +1,4 @@
-package server
+package router
 
 import (
 	"io"
@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/stretchr/testify/assert"
@@ -22,15 +23,17 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 
 	return resp.StatusCode, string(respBody)
 }
 
 func TestServer_UpdateMetric(t *testing.T) {
-	memStorage := storage.NewMemStorage()
-	s := NewServer(memStorage)
-	ts := httptest.NewServer(s.Router)
+	var memStorage metrics.MetricStorage = storage.NewMemStorage()
+	r := NewRouter(&memStorage)
+	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")

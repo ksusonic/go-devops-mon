@@ -1,4 +1,4 @@
-package server
+package router
 
 import (
 	"log"
@@ -10,14 +10,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+func init() {
+	registerHandler("POST", "/update/{type}/{name}/{value}", updateMetricHandler)
+}
+
 type updateRequest struct {
 	Type     string
 	Name     string
 	RawValue string
 }
 
-// UpdateMetric — обработчик обновления метрики по типу и названию
-func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+// updateMetricHandler — обработчик обновления метрики по типу и названию
+var updateMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	requestData := updateRequest{
 		Type:     chi.URLParam(r, "type"),
 		Name:     chi.URLParam(r, "name"),
@@ -29,7 +33,7 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Incorrect value: %s\n", requestData.RawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		s.Storage.SetMetric(metrics.AtomicMetric{
+		(*c.storage).SetMetric(metrics.AtomicMetric{
 			Name:  requestData.Name,
 			Type:  requestData.Type,
 			Value: value,
@@ -41,12 +45,12 @@ func (s Server) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Incorrect value: %s\n", requestData.RawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		s.Storage.SetMetric(metrics.AtomicMetric{
+		(*c.storage).SetMetric(metrics.AtomicMetric{
 			Name:  requestData.Name,
 			Type:  requestData.Type,
 			Value: value,
 		})
-		log.Printf("Increased counter %s on: %d\n", requestData.Name, value)
+		log.Printf("Updated counter %s: %d\n", requestData.Name, value)
 	} else {
 		log.Println("unexpected metric type!")
 		w.WriteHeader(http.StatusNotImplemented)
