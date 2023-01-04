@@ -26,16 +26,14 @@ func (m MetricCollector) sendMetric(path string) {
 func (m MetricCollector) PushMetrics() {
 	for _, metric := range m.Storage.GetAllMetrics() {
 		var stringMetricValue string
-		if metric.Type == metrics.GaugeType {
-			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
-		} else if metric.Type == metrics.CounterType {
-			stringMetricValue = strconv.FormatInt(metric.Value.(int64), 10)
+		if metric.MType == metrics.GaugeMType {
+			stringMetricValue = strconv.FormatFloat(*metric.Value, 'f', -1, 64)
+		} else if metric.MType == metrics.CounterMType {
+			stringMetricValue = strconv.FormatInt(*metric.Delta, 10)
 		} else {
-			log.Printf("Unknown metric type: %s\n", metric.Type)
-			// using float as default value
-			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
+			log.Printf("Unknown metric type: %s\n", metric.MType)
 		}
-		var path = m.makePushURL(metric.Name, metric.Type, stringMetricValue)
+		var path = m.makePushURL(metric.ID, metric.MType, stringMetricValue)
 		m.sendMetric(path)
 	}
 }
