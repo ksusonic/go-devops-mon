@@ -25,10 +25,10 @@ var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 		return
 	}
 	var stringValue string
-	if reqType == metrics.CounterType {
-		stringValue = strconv.FormatInt(value.Value.(int64), 10)
+	if reqType == metrics.CounterMType {
+		stringValue = strconv.FormatInt(*value.Delta, 10)
 	} else {
-		stringValue = strconv.FormatFloat(value.Value.(float64), 'f', -1, 64)
+		stringValue = strconv.FormatFloat(*value.Value, 'f', -1, 64)
 	}
 	_, _ = w.Write([]byte(stringValue))
 }
