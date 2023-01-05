@@ -19,7 +19,7 @@ func init() {
 var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
-	value, err := (*c.storage).GetMetric(reqName)
+	value, err := (*c.storage).GetMetric(reqType, reqName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

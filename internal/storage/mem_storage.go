@@ -7,30 +7,38 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
+type TypeToNameToMetric map[string]map[string]metrics.AtomicMetric
+
 type MemStorage struct {
-	nameMapping map[string]metrics.AtomicMetric
+	typeToNameMapping TypeToNameToMetric
 }
 
 func NewMemStorage() *MemStorage {
+	var typeToNameToMetric = make(TypeToNameToMetric)
+
+	// init map for known types
+	typeToNameToMetric[metrics.GaugeType] = make(map[string]metrics.AtomicMetric)
+	typeToNameToMetric[metrics.CounterType] = make(map[string]metrics.AtomicMetric)
+
 	return &MemStorage{
-		nameMapping: make(map[string]metrics.AtomicMetric),
+		typeToNameMapping: typeToNameToMetric,
 	}
 }
 
 func (m *MemStorage) SetMetric(metric metrics.AtomicMetric) {
 	if metric.Type == metrics.CounterType {
 		var lastValue int64 = 0
-		_, ok := (*m).nameMapping[metric.Name]
+		_, ok := (*m).typeToNameMapping[metric.Type][metric.Name]
 		if ok {
-			lastValue = (*m).nameMapping[metric.Name].Value.(int64)
+			lastValue = (*m).typeToNameMapping[metric.Type][metric.Name].Value.(int64)
 		}
-		(*m).nameMapping[metric.Name] = metrics.AtomicMetric{
+		(*m).typeToNameMapping[metric.Type][metric.Name] = metrics.AtomicMetric{
 			Name:  metric.Name,
 			Type:  metrics.CounterType,
 			Value: lastValue + metric.Value.(int64),
 		}
 	} else {
-		(*m).nameMapping[metric.Name] = metric
+		(*m).typeToNameMapping[metric.Type][metric.Name] = metric
 	}
 }
 
@@ -40,8 +48,8 @@ func (m *MemStorage) AddMetrics(atomicMetrics []metrics.AtomicMetric) {
 	}
 }
 
-func (m *MemStorage) GetMetric(name string) (metrics.AtomicMetric, error) {
-	value, ok := m.nameMapping[name]
+func (m *MemStorage) GetMetric(type_, name string) (metrics.AtomicMetric, error) {
+	value, ok := m.typeToNameMapping[type_][name]
 	if ok {
 		return value, nil
 	} else {
@@ -51,16 +59,8 @@ func (m *MemStorage) GetMetric(name string) (metrics.AtomicMetric, error) {
 
 func (m *MemStorage) GetAllMetrics() []metrics.AtomicMetric {
 	var result []metrics.AtomicMetric
-	for _, m := range m.nameMapping {
-		result = append(result, m)
-	}
-	return result
-}
-
-func (m *MemStorage) GetAllTypedMetrics(type_ string) []metrics.AtomicMetric {
-	var result []metrics.AtomicMetric
-	for _, m := range m.nameMapping {
-		if m.Type == type_ {
+	for _, t := range m.typeToNameMapping {
+		for _, m := range t {
 			result = append(result, m)
 		}
 	}
@@ -69,31 +69,33 @@ func (m *MemStorage) GetAllTypedMetrics(type_ string) []metrics.AtomicMetric {
 
 func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]interface{} {
 	res := make(map[string]map[string]interface{})
-	for _, m := range m.nameMapping {
-		_, ok := res[m.Type]
-		if !ok {
-			res[m.Type] = make(map[string]interface{})
+	for _, t := range m.typeToNameMapping {
+		for _, m := range t {
+			_, ok := res[m.Type]
+			if !ok {
+				res[m.Type] = make(map[string]interface{})
+			}
+			res[m.Type][m.Name] = m.Value
 		}
-		res[m.Type][m.Name] = m.Value
 	}
 	return res
 }
 
 func (m *MemStorage) IncPollCount() {
-	metric, ok := (*m).nameMapping["PollCount"]
+	metric, ok := (*m).typeToNameMapping[metrics.CounterType]["PollCount"]
 	var previousValue int64 = 0
 	if ok {
 		previousValue = metric.Value.(int64)
 	}
 
-	(*m).nameMapping["PollCount"] = metrics.AtomicMetric{
+	(*m).typeToNameMapping[metrics.CounterType]["PollCount"] = metrics.AtomicMetric{
 		Name:  "PollCount",
 		Type:  metrics.CounterType,
 		Value: previousValue + 1,
 	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	(*m).nameMapping["RandomValue"] = metrics.AtomicMetric{
+	(*m).typeToNameMapping[metrics.CounterType]["RandomValue"] = metrics.AtomicMetric{
 		Name:  "RandomValue",
 		Type:  metrics.CounterType,
 		Value: rand.Int63(),

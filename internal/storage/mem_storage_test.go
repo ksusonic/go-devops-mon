@@ -21,7 +21,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric("PollCount")
+			_, err := tt.memStorage.GetMetric("counter", "PollCount")
 			require.Error(t, err)
 
 			tt.memStorage.SetMetric(metrics.AtomicMetric{
@@ -29,7 +29,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 				Type:  metrics.CounterType,
 				Value: int64(1),
 			})
-			value, err := tt.memStorage.GetMetric("PollCount")
+			value, err := tt.memStorage.GetMetric("counter", "PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
 			var expected int64 = 1
@@ -58,11 +58,11 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(tt.args.Name)
+			_, err := tt.memStorage.GetMetric(tt.args.Type, tt.args.Name)
 			require.Error(t, err)
 
 			tt.memStorage.SetMetric(tt.args)
-			result, err := tt.memStorage.GetMetric(tt.args.Name)
+			result, err := tt.memStorage.GetMetric(tt.args.Type, tt.args.Name)
 			require.NoError(t, err)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.args, result)

@@ -22,11 +22,9 @@ type MetricStorage interface {
 	AddMetrics([]AtomicMetric)
 
 	// GetMetric Get metric or error
-	GetMetric(name string) (AtomicMetric, error)
+	GetMetric(type_, name string) (AtomicMetric, error)
 	// GetAllMetrics Get all metrics as slice
 	GetAllMetrics() []AtomicMetric
-	// GetAllTypedMetrics Get all metrics by specific type
-	GetAllTypedMetrics(type_ string) []AtomicMetric
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 
