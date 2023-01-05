@@ -1,6 +1,8 @@
 package router
 
 import (
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,7 +13,8 @@ import (
 )
 
 func init() {
-	registerHandler("POST", "/update/{type}/{name}/{value}", updateMetricHandler)
+	registerHandler("POST", "/update", updateMetricHandler)
+	registerHandler("POST", "/update/{type}/{name}/{value}", updateOneMetricHandler)
 }
 
 type updateRequest struct {
@@ -20,8 +23,30 @@ type updateRequest struct {
 	RawValue string
 }
 
-// updateMetricHandler — обработчик обновления метрики по типу и названию
+// updateMetricHandler — updates metric by Metrics data in body
 var updateMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+
+	var m metrics.Metrics
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		return
+	}
+
+	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
+		w.WriteHeader(http.StatusNotImplemented)
+		log.Printf("Unknown metric type %s\n", m.MType)
+	} else {
+		(*c.storage).SetMetric(m)
+		log.Printf("Updated %s\n", m.String())
+	}
+}
+
+// updateOneMetricHandler — updates metric by type, name and value
+var updateOneMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	requestData := updateRequest{
 		Type:     chi.URLParam(r, "type"),
 		Name:     chi.URLParam(r, "name"),

@@ -1,30 +1,39 @@
 package metrics
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
 const (
-	GaugeType   = "gauge"
-	CounterType = "counter"
+	GaugeMType   = "gauge"
+	CounterMType = "counter"
 )
 
-type AtomicMetric struct {
-	Name  string
-	Type  string
-	Value interface{}
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // Значение метрики в случае передачи gauge
+}
+
+func (m Metrics) String() string {
+	switch m.MType {
+	case CounterMType:
+		return fmt.Sprintf("metric %s of type %s with value %d", m.ID, m.MType, *m.Delta)
+	case GaugeMType:
+		return fmt.Sprintf("metric %s of type %s with value %f", m.ID, m.MType, *m.Value)
+	default:
+		return ""
+	}
 }
 
 type MetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(AtomicMetric)
-	AddMetrics([]AtomicMetric)
+	SetMetric(Metrics)
+	AddMetrics([]Metrics)
 
 	// GetMetric Get metric or error
-	GetMetric(type_, name string) (AtomicMetric, error)
+	GetMetric(type_, name string) (Metrics, error)
 	// GetAllMetrics Get all metrics as slice
-	GetAllMetrics() []AtomicMetric
+	GetAllMetrics() []Metrics
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 
@@ -32,20 +41,4 @@ type MetricStorage interface {
 	IncPollCount()
 	// RandomizeRandomValue Set RandomValue to random number
 	RandomizeRandomValue()
-}
-
-func (am AtomicMetric) GetStringValue() (string, error) {
-	var stringValue string
-	switch am.Value.(type) {
-	case float64:
-		stringValue = strconv.FormatFloat(am.Value.(float64), 'f', -1, 64)
-	case int64:
-		stringValue = strconv.FormatInt(am.Value.(int64), 10)
-	case string:
-		stringValue = am.Value.(string)
-	default:
-		err := fmt.Errorf("unknown metric type: %s", am.Type)
-		return "", err
-	}
-	return stringValue, nil
 }
