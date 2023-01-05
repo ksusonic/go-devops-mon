@@ -73,7 +73,7 @@ func TestServer_UpdateOneMetricHandler(t *testing.T) {
 
 		if tt.ExpectedStatus == http.StatusOK {
 			// check how metric saved in storage
-			actualMetric, err := memStorage.GetMetric(tt.MName)
+			actualMetric, err := memStorage.GetMetric(tt.MType, tt.MName)
 			if err != nil {
 				t.Errorf("metric %s not saved in storage", tt.MName)
 			}
@@ -139,7 +139,7 @@ func TestServer_UpdateMetricHandler(t *testing.T) {
 
 		if tt.ExpectedStatus == http.StatusOK {
 			// check how metric saved in storage
-			actualMetric, err := memStorage.GetMetric(tt.Metric.ID)
+			actualMetric, err := memStorage.GetMetric(tt.Metric.MType, tt.Metric.ID)
 			if err != nil {
 				t.Errorf("metric %s not saved in storage", tt.Metric.ID)
 			}

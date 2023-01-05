@@ -32,7 +32,7 @@ var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 		return
 	}
 
-	value, err := (*c.storage).GetMetric(m.ID)
+	value, err := (*c.storage).GetMetric(m.MType, m.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -49,6 +49,7 @@ var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 
 var getOneMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	reqName := chi.URLParam(r, "name")
+	reqType := chi.URLParam(r, "type")
 	value, err := (*c.storage).GetMetric(reqType, reqName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
