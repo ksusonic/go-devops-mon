@@ -95,9 +95,9 @@ func (m *MemStorage) IncPollCount() {
 	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	(*m).typeToNameMapping[metrics.CounterType]["RandomValue"] = metrics.AtomicMetric{
+	(*m).typeToNameMapping[metrics.GaugeType]["RandomValue"] = metrics.AtomicMetric{
 		Name:  "RandomValue",
-		Type:  metrics.CounterType,
+		Type:  metrics.GaugeType,
 		Value: rand.Int63(),
 	}
 }
