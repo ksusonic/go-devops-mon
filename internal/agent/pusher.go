@@ -15,7 +15,7 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) {
 	if err != nil {
 		log.Printf("Error marshalling metric: %v\n", err)
 	}
-	r, _ := http.NewRequest(http.MethodPost, m.ServerURL+"update", bytes.NewReader(marshall))
+	r, _ := http.NewRequest(http.MethodPost, m.ServerURL+"update/", bytes.NewReader(marshall))
 	r.Header.Add("Content-Type", "application/json")
 
 	response, err := m.Client.Do(r)
@@ -27,7 +27,7 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) {
 			if err != nil {
 				log.Printf("status %s while sending metric\n", response.Status)
 			} else {
-				log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
+				log.Printf("status %s while sending metric on \"update/\" path : %s\n", response.Status, string(readBody))
 			}
 		}
 		response.Body.Close()
