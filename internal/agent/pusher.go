@@ -1,39 +1,41 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"log"
-	"strconv"
+	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-const contentType = "text/plain"
+func (m MetricCollector) sendMetric(metric metrics.Metrics) {
+	marshall, err := json.Marshal(metric)
+	if err != nil {
+		log.Printf("Error marshalling metric: %v\n", err)
+	}
+	r, _ := http.NewRequest(http.MethodPost, m.ServerURL+"update", bytes.NewReader(marshall))
+	r.Header.Add("Content-Type", "application/json")
 
-func (m MetricCollector) makePushURL(metricName, metricType, metricValue string) string {
-	return "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) +
-		"/update/" + metricType + "/" + metricName + "/" + metricValue
-}
-
-func (m MetricCollector) sendMetric(path string) {
-	response, err := m.Client.Post(path, contentType, nil)
+	response, err := m.Client.Do(r)
 	if err != nil {
 		log.Printf("Error sending push metric request: %v\n", err)
 	} else {
+		if response.StatusCode != http.StatusOK {
+			readBody, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Printf("status %s while sending metric\n", response.Status)
+			} else {
+				log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
+			}
+		}
 		response.Body.Close()
 	}
 }
 
 func (m MetricCollector) PushMetrics() {
 	for _, metric := range m.Storage.GetAllMetrics() {
-		var stringMetricValue string
-		if metric.MType == metrics.GaugeMType {
-			stringMetricValue = strconv.FormatFloat(*metric.Value, 'f', -1, 64)
-		} else if metric.MType == metrics.CounterMType {
-			stringMetricValue = strconv.FormatInt(*metric.Delta, 10)
-		} else {
-			log.Printf("Unknown metric type: %s\n", metric.MType)
-		}
-		var path = m.makePushURL(metric.ID, metric.MType, stringMetricValue)
-		m.sendMetric(path)
+		m.sendMetric(metric)
 	}
 }

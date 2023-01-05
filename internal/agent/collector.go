@@ -3,6 +3,7 @@ package agent
 import (
 	"net/http"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -12,8 +13,7 @@ type MetricCollector struct {
 	Storage     metrics.MetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
-	ServerHost  string
-	ServerPort  int
+	ServerURL   string
 	Client      http.Client
 }
 
@@ -22,14 +22,13 @@ func NewMetricCollector(
 	collectInterval time.Duration,
 	pushInterval time.Duration,
 	serverHost string,
-	serverPort int,
+	serverPort int64,
 ) *MetricCollector {
 	return &MetricCollector{
 		Storage:     storage,
 		CollectChan: time.NewTicker(collectInterval).C,
 		PushChan:    time.NewTicker(pushInterval).C,
-		ServerHost:  serverHost,
-		ServerPort:  serverPort,
+		ServerURL:   "http://" + serverHost + ":" + strconv.FormatInt(serverPort, 10) + "/",
 		Client:      http.Client{},
 	}
 }
