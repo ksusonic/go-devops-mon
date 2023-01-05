@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registerHandler("POST", "/update", updateMetricHandler)
+	registerHandler("POST", "/update/", updateMetricHandler)
 	registerHandler("POST", "/update/{type}/{name}/{value}", updateOneMetricHandler)
 }
 
@@ -27,12 +27,14 @@ type updateRequest struct {
 var updateMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
 	var m metrics.Metrics
 	err = json.Unmarshal(body, &m)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 

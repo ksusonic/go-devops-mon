@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,12 +13,40 @@ import (
 )
 
 func init() {
-	registerHandler("GET", "/value/{type}/{name}", getMetricHandler)
+	registerHandler("POST", "/value/", getMetricHandler)
+	registerHandler("GET", "/value/{type}/{name}", getOneMetricHandler)
 	registerHandler("GET", "/", getAllMetricsHandler)
 }
 
 var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
-	reqType := chi.URLParam(r, "type")
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var m metrics.Metrics
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	value, err := (*c.storage).GetMetric(m.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	marshal, err := json.Marshal(value)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, _ = w.Write(marshal)
+}
+
+var getOneMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	reqName := chi.URLParam(r, "name")
 	value, err := (*c.storage).GetMetric(reqType, reqName)
 	if err != nil {
@@ -25,7 +54,7 @@ var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 		return
 	}
 	var stringValue string
-	if reqType == metrics.CounterMType {
+	if value.MType == metrics.CounterMType {
 		stringValue = strconv.FormatInt(*value.Delta, 10)
 	} else {
 		stringValue = strconv.FormatFloat(*value.Value, 'f', -1, 64)
