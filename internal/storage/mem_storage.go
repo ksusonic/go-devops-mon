@@ -25,7 +25,8 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (m *MemStorage) SetMetric(metric metrics.Metrics) {
+func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
+	var result *metrics.Metrics
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
 		_, ok := (*m).typeToNameMapping[metric.MType][metric.ID]
@@ -33,14 +34,16 @@ func (m *MemStorage) SetMetric(metric metrics.Metrics) {
 			lastValue = *(*m).typeToNameMapping[metric.MType][metric.ID].Delta
 		}
 		resultValue := lastValue + *metric.Delta
-		(*m).typeToNameMapping[metric.MType][metric.ID] = metrics.Metrics{
+		result = &metrics.Metrics{
 			ID:    metric.ID,
 			MType: metrics.CounterMType,
 			Delta: &resultValue,
 		}
 	} else {
-		(*m).typeToNameMapping[metric.MType][metric.ID] = metric
+		result = &metric
 	}
+	(*m).typeToNameMapping[metric.MType][metric.ID] = *result
+	return *result
 }
 
 func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
@@ -76,7 +79,11 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 			if !ok {
 				res[m.MType] = make(map[string]interface{})
 			}
-			res[m.MType][m.ID] = m.Value
+			if m.MType == metrics.CounterMType {
+				res[m.MType][m.ID] = *m.Delta
+			} else {
+				res[m.MType][m.ID] = *m.Value
+			}
 		}
 	}
 	return res
