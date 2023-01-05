@@ -104,10 +104,10 @@ func (m *MemStorage) IncPollCount() {
 	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	val := rand.Int63()
-	(*m).typeToNameMapping[metrics.CounterMType]["RandomValue"] = metrics.Metrics{
+	val := rand.Float64()
+	(*m).typeToNameMapping[metrics.GaugeMType]["RandomValue"] = metrics.Metrics{
 		ID:    "RandomValue",
-		MType: metrics.CounterMType,
-		Delta: &val,
+		MType: metrics.GaugeMType,
+		Value: &val,
 	}
 }
