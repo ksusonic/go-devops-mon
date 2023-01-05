@@ -61,10 +61,10 @@ func TestServer_GetMetric(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")
+	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, res := testRequest(t, ts, "GET", "/value/gauge/BuckHashSys")
+	statusCode, res := testRequest(t, ts, "GET", "/value/gauge/BuckHashSys", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, "123.01", res)
 }
@@ -108,12 +108,12 @@ func TestServer_GetAllMetrics(t *testing.T) {
 		"/update/counter/PollCount/5",
 		"/update/counter/RandomValue/3916589616287113937",
 	} {
-		statusCode, _ := testRequest(t, ts, "POST", request)
+		statusCode, _ := testRequest(t, ts, "POST", request, nil)
 		assert.Equal(t, http.StatusOK, statusCode)
 	}
 	expected := `{"counter":{"PollCount":5,"RandomValue":3916589616287113937},"gauge":{"Alloc":218216,"BuckHashSys":3829,"Frees":24,"GCCPUFraction":0,"GCSys":7963072,"HeapAlloc":218216.123,"HeapIdle":3080192,"HeapInuse":786432.01,"HeapObjects":613,"HeapReleased":3047424,"HeapSys":3866624,"LastGC":0,"Lookups":0,"MCacheInuse":14400,"MCacheSys":15600,"MSpanInuse":30528,"MSpanSys":32544,"Mallocs":637,"NextGC":4194304,"NumForcedGC":0,"NumGC":0,"OtherSys":749387,"PauseTotalNs":0,"StackInuse":327680,"StackSys":327680,"Sys":12958736,"TotalAlloc":218216}}`
 
-	statusCode, actual := testRequest(t, ts, "GET", "/")
+	statusCode, actual := testRequest(t, ts, "GET", "/", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.JSONEq(t, expected, actual)
 }
