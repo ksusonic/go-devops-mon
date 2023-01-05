@@ -27,7 +27,7 @@ func (m Metrics) String() string {
 
 type MetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(Metrics)
+	SetMetric(Metrics) Metrics
 	AddMetrics([]Metrics)
 
 	// GetMetric Get metric or error

@@ -42,8 +42,16 @@ var updateMetricHandler = func(w http.ResponseWriter, r *http.Request, c context
 		w.WriteHeader(http.StatusNotImplemented)
 		log.Printf("Unknown metric type %s\n", m.MType)
 	} else {
-		(*c.storage).SetMetric(m)
+		resultMetric := (*c.storage).SetMetric(m)
 		log.Printf("Updated %s\n", m.String())
+
+		marshal, err := json.Marshal(resultMetric)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(marshal)
 	}
 }
 

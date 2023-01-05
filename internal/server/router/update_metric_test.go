@@ -134,7 +134,7 @@ func TestServer_UpdateMetricHandler(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		statusCode, _ := testRequest(t, ts, "POST", "/update", bytes.NewReader(marshal))
+		statusCode, _ := testRequest(t, ts, "POST", "/update/", bytes.NewReader(marshal))
 		assert.Equal(t, tt.ExpectedStatus, statusCode)
 
 		if tt.ExpectedStatus == http.StatusOK {
