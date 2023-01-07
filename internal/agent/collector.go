@@ -9,28 +9,31 @@ import (
 )
 
 type MetricCollector struct {
-	Storage     metrics.MetricStorage
-	CollectChan <-chan time.Time
-	PushChan    <-chan time.Time
-	ServerHost  string
-	ServerPort  int
-	Client      http.Client
+	Storage             metrics.MetricStorage
+	CollectChan         <-chan time.Time
+	PushChan            <-chan time.Time
+	ServerRequestScheme string
+	ServerHost          string
+	ServerPort          int
+	Client              http.Client
 }
 
 func NewMetricCollector(
 	storage metrics.MetricStorage,
 	collectInterval time.Duration,
 	pushInterval time.Duration,
+	serverRequestScheme string,
 	serverHost string,
 	serverPort int,
 ) *MetricCollector {
 	return &MetricCollector{
-		Storage:     storage,
-		CollectChan: time.NewTicker(collectInterval).C,
-		PushChan:    time.NewTicker(pushInterval).C,
-		ServerHost:  serverHost,
-		ServerPort:  serverPort,
-		Client:      http.Client{},
+		Storage:             storage,
+		CollectChan:         time.NewTicker(collectInterval).C,
+		PushChan:            time.NewTicker(pushInterval).C,
+		ServerRequestScheme: serverRequestScheme,
+		ServerHost:          serverHost,
+		ServerPort:          serverPort,
+		Client:              http.Client{},
 	}
 }
 

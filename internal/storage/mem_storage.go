@@ -98,6 +98,6 @@ func (m *MemStorage) RandomizeRandomValue() {
 	(*m).typeToNameMapping[metrics.GaugeType]["RandomValue"] = metrics.AtomicMetric{
 		Name:  "RandomValue",
 		Type:  metrics.GaugeType,
-		Value: rand.Int63(),
+		Value: rand.Float64(),
 	}
 }

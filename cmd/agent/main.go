@@ -9,15 +9,16 @@ import (
 )
 
 const (
-	CollectInterval = time.Second * 2
-	PushInterval    = time.Second * 10
-	ServerHost      = "localhost"
-	ServerPort      = 8080
+	CollectInterval     = time.Second * 2
+	PushInterval        = time.Second * 10
+	ServerRequestMethod = "http"
+	ServerHost          = "localhost"
+	ServerPort          = 8080
 )
 
 func main() {
 	memStorage := storage.NewMemStorage()
-	collector := agent.NewMetricCollector(memStorage, CollectInterval, PushInterval, ServerHost, ServerPort)
+	collector := agent.NewMetricCollector(memStorage, CollectInterval, PushInterval, ServerRequestMethod, ServerHost, ServerPort)
 	for {
 		select {
 		case <-collector.CollectChan:

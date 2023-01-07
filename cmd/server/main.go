@@ -10,5 +10,8 @@ import (
 func main() {
 	memStorage := storage.NewMemStorage()
 	s := server.NewServer(memStorage)
-	log.Fatal(s.Start())
+	err := s.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

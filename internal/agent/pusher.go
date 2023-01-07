@@ -2,6 +2,7 @@ package agent
 
 import (
 	"log"
+	"net/url"
 	"strconv"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -10,8 +11,12 @@ import (
 const contentType = "text/plain"
 
 func (m MetricCollector) makePushURL(metricName, metricType, metricValue string) string {
-	return "http://" + m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10) +
-		"/update/" + metricType + "/" + metricName + "/" + metricValue
+	u := url.URL{
+		Scheme: m.ServerRequestScheme,
+		Host:   m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10),
+		Path:   "/update/" + metricType + "/" + metricName + "/" + metricValue,
+	}
+	return u.String()
 }
 
 func (m MetricCollector) sendMetric(path string) {
@@ -31,9 +36,7 @@ func (m MetricCollector) PushMetrics() {
 		} else if metric.Type == metrics.CounterType {
 			stringMetricValue = strconv.FormatInt(metric.Value.(int64), 10)
 		} else {
-			log.Printf("Unknown metric type: %s\n", metric.Type)
-			// using float as default value
-			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
+			log.Fatalf("Unknown metric type: %s\n", metric.Type)
 		}
 		var path = m.makePushURL(metric.Name, metric.Type, stringMetricValue)
 		m.sendMetric(path)
