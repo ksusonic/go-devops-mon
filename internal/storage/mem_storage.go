@@ -28,17 +28,17 @@ func NewMemStorage() *MemStorage {
 func (m *MemStorage) SetMetric(metric metrics.AtomicMetric) {
 	if metric.Type == metrics.CounterType {
 		var lastValue int64 = 0
-		_, ok := (*m).typeToNameMapping[metric.Type][metric.Name]
+		_, ok := m.typeToNameMapping[metric.Type][metric.Name]
 		if ok {
-			lastValue = (*m).typeToNameMapping[metric.Type][metric.Name].Value.(int64)
+			lastValue = m.typeToNameMapping[metric.Type][metric.Name].Value.(int64)
 		}
-		(*m).typeToNameMapping[metric.Type][metric.Name] = metrics.AtomicMetric{
+		m.typeToNameMapping[metric.Type][metric.Name] = metrics.AtomicMetric{
 			Name:  metric.Name,
 			Type:  metrics.CounterType,
 			Value: lastValue + metric.Value.(int64),
 		}
 	} else {
-		(*m).typeToNameMapping[metric.Type][metric.Name] = metric
+		m.typeToNameMapping[metric.Type][metric.Name] = metric
 	}
 }
 
@@ -86,20 +86,20 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 }
 
 func (m *MemStorage) IncPollCount() {
-	metric, ok := (*m).typeToNameMapping[metrics.CounterType]["PollCount"]
+	metric, ok := m.typeToNameMapping[metrics.CounterType]["PollCount"]
 	var previousValue int64 = 0
 	if ok {
 		previousValue = metric.Value.(int64)
 	}
 
-	(*m).typeToNameMapping[metrics.CounterType]["PollCount"] = metrics.AtomicMetric{
+	m.typeToNameMapping[metrics.CounterType]["PollCount"] = metrics.AtomicMetric{
 		Name:  "PollCount",
 		Type:  metrics.CounterType,
 		Value: previousValue + 1,
 	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	(*m).typeToNameMapping[metrics.GaugeType]["RandomValue"] = metrics.AtomicMetric{
+	m.typeToNameMapping[metrics.GaugeType]["RandomValue"] = metrics.AtomicMetric{
 		Name:  "RandomValue",
 		Type:  metrics.GaugeType,
 		Value: rand.Float64(),

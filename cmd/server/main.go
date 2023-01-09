@@ -2,8 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
 
-	"github.com/ksusonic/go-devops-mon/internal/controllers/metric"
+	"github.com/ksusonic/go-devops-mon/internal/controllers"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
@@ -19,11 +20,11 @@ func main() {
 
 	memStorage := storage.NewMemStorage()
 	router := chi.NewRouter()
-	metricController := metric.NewMetricController(memStorage)
+	metricController := controllers.NewMetricController(memStorage)
 	router.Mount("/", metricController.Router())
 
-	s := server.NewServer(&config, router)
-	err := s.Start()
+	log.Println("Server started")
+	err := http.ListenAndServe(config.ServeAddress, router)
 	if err != nil {
 		log.Fatal(err)
 	}
