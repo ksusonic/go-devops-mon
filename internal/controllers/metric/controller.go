@@ -1,4 +1,4 @@
-package controller
+package metric
 
 import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -7,17 +7,21 @@ import (
 )
 
 type Controller struct {
-	Storage metrics.MetricStorage
+	Storage metrics.ServerMetricStorage
 }
 
-func (c *Controller) Register(router *chi.Mux) {
+func (c *Controller) Router() *chi.Mux {
+	router := chi.NewRouter()
+
 	router.Get("/value/{type}/{name}", c.getMetricHandler)
 	router.Get("/", c.getAllMetricsHandler)
 
 	router.Post("/update/{type}/{name}/{value}", c.updateMetricHandler)
+
+	return router
 }
 
-func NewController(storage metrics.MetricStorage) *Controller {
+func NewMetricController(storage metrics.ServerMetricStorage) *Controller {
 	return &Controller{
 		Storage: storage,
 	}

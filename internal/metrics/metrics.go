@@ -16,24 +16,6 @@ type AtomicMetric struct {
 	Value interface{}
 }
 
-type MetricStorage interface {
-	// SetMetric Set value to metric
-	SetMetric(AtomicMetric)
-	AddMetrics([]AtomicMetric)
-
-	// GetMetric Get metric or error
-	GetMetric(type_, name string) (AtomicMetric, error)
-	// GetAllMetrics Get all metrics as slice
-	GetAllMetrics() []AtomicMetric
-	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
-	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
-
-	// IncPollCount Increases field PollCount by 1
-	IncPollCount()
-	// RandomizeRandomValue Set RandomValue to random number
-	RandomizeRandomValue()
-}
-
 func (am AtomicMetric) GetStringValue() (string, error) {
 	var stringValue string
 	switch am.Value.(type) {

@@ -9,7 +9,7 @@ import (
 )
 
 type MetricCollector struct {
-	Storage             metrics.MetricStorage
+	Storage             metrics.AgentMetricStorage
 	CollectChan         <-chan time.Time
 	PushChan            <-chan time.Time
 	ServerRequestScheme string
@@ -19,7 +19,7 @@ type MetricCollector struct {
 }
 
 func NewMetricCollector(
-	storage metrics.MetricStorage,
+	storage metrics.AgentMetricStorage,
 	collectInterval time.Duration,
 	pushInterval time.Duration,
 	serverRequestScheme string,

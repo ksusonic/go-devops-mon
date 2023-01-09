@@ -1,4 +1,4 @@
-package controller
+package metric
 
 import (
 	"github.com/go-chi/chi/v5"
@@ -13,10 +13,10 @@ import (
 )
 
 func TestServer_GetMetric(t *testing.T) {
-	var memStorage metrics.MetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewController(memStorage)
-	r.Register(router)
+	r := NewMetricController(memStorage)
+	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
@@ -29,10 +29,10 @@ func TestServer_GetMetric(t *testing.T) {
 }
 
 func TestServer_GetAllMetrics(t *testing.T) {
-	var memStorage metrics.MetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewController(memStorage)
-	r.Register(router)
+	r := NewMetricController(memStorage)
+	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 

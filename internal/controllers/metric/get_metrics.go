@@ -1,4 +1,4 @@
-package controller
+package metric
 
 import (
 	"encoding/json"

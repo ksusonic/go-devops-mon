@@ -49,6 +49,10 @@ func (m *MemStorage) AddMetrics(atomicMetrics []metrics.AtomicMetric) {
 }
 
 func (m *MemStorage) GetMetric(type_, name string) (metrics.AtomicMetric, error) {
+	_, ok := m.typeToNameMapping[type_]
+	if !ok {
+		return metrics.AtomicMetric{}, fmt.Errorf("no metric type '%s'", type_)
+	}
 	value, ok := m.typeToNameMapping[type_][name]
 	if ok {
 		return value, nil
