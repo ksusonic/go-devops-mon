@@ -1,6 +1,7 @@
-package router
+package controller
 
 import (
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,8 +31,10 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 
 func TestServer_UpdateMetric(t *testing.T) {
 	var memStorage metrics.MetricStorage = storage.NewMemStorage()
-	r := NewRouter(&memStorage)
-	ts := httptest.NewServer(r)
+	router := chi.NewRouter()
+	r := NewController(memStorage)
+	r.Register(router)
+	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01")

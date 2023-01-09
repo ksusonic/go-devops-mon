@@ -1,4 +1,4 @@
-package router
+package controller
 
 import (
 	"encoding/json"
@@ -11,15 +11,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func init() {
-	registerHandler("GET", "/value/{type}/{name}", getMetricHandler)
-	registerHandler("GET", "/", getAllMetricsHandler)
-}
-
-var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
+func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
-	value, err := (*c.storage).GetMetric(reqType, reqName)
+	value, err := c.Storage.GetMetric(reqType, reqName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -33,8 +28,8 @@ var getMetricHandler = func(w http.ResponseWriter, r *http.Request, c context) {
 	_, _ = w.Write([]byte(stringValue))
 }
 
-var getAllMetricsHandler = func(w http.ResponseWriter, _ *http.Request, c context) {
-	marshall, err := json.Marshal((*c.storage).GetMappedByTypeAndNameMetrics())
+func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request) {
+	marshall, err := json.Marshal(c.Storage.GetMappedByTypeAndNameMetrics())
 	if err != nil {
 		log.Fatal(err)
 	}
