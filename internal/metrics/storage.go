@@ -2,21 +2,21 @@ package metrics
 
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(AtomicMetric)
+	SetMetric(Metrics) Metrics
 
 	// GetMetric Get metric or error
-	GetMetric(type_, name string) (AtomicMetric, error)
+	GetMetric(type_, name string) (Metrics, error)
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 }
 
 type AgentMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(AtomicMetric)
-	AddMetrics([]AtomicMetric)
+	SetMetric(Metrics) Metrics
+	AddMetrics([]Metrics)
 
 	// GetAllMetrics Get all metrics as slice
-	GetAllMetrics() []AtomicMetric
+	GetAllMetrics() []Metrics
 
 	// IncPollCount Increases field PollCount by 1
 	IncPollCount()
