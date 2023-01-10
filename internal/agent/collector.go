@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -13,27 +14,32 @@ type MetricCollector struct {
 	Storage     metrics.AgentMetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
-	PushUrl     string
+	PushURL     string
 	Client      http.Client
 }
 
 func NewMetricCollector(
+	cfg *Config,
 	storage metrics.AgentMetricStorage,
-	collectInterval time.Duration,
-	pushInterval time.Duration,
-	serverRequestScheme string,
-	serverAddress string,
 ) *MetricCollector {
 	u := url.URL{
-		Scheme: serverRequestScheme,
-		Host:   serverAddress,
+		Scheme: cfg.AddressScheme,
+		Host:   cfg.Address,
 		Path:   "/update/",
+	}
+	pollInterval, err := time.ParseDuration(cfg.PollInterval)
+	if err != nil {
+		log.Fatal(err)
+	}
+	reportInterval, err := time.ParseDuration(cfg.ReportInterval)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return &MetricCollector{
 		Storage:     storage,
-		CollectChan: time.NewTicker(collectInterval).C,
-		PushChan:    time.NewTicker(pushInterval).C,
-		PushUrl:     u.String(),
+		CollectChan: time.NewTicker(pollInterval).C,
+		PushChan:    time.NewTicker(reportInterval).C,
+		PushURL:     u.String(),
 		Client:      http.Client{},
 	}
 }
