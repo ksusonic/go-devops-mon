@@ -17,7 +17,7 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) {
 	if err != nil {
 		log.Printf("Error marshalling metric: %v\n", err)
 	}
-	r, _ := http.NewRequest(http.MethodPost, m.PushUrl, bytes.NewReader(marshall))
+	r, _ := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
 	r.Header.Add("Content-Type", contentType)
 
 	response, err := m.Client.Do(r)

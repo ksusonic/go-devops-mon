@@ -2,22 +2,15 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/agent"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
-const (
-	CollectInterval     = time.Second * 2
-	PushInterval        = time.Second * 10
-	ServerRequestMethod = "http"
-	ServerAddress       = "localhost:8080"
-)
-
 func main() {
+	cfg := agent.NewConfig()
 	memStorage := storage.NewMemStorage()
-	collector := agent.NewMetricCollector(memStorage, CollectInterval, PushInterval, ServerRequestMethod, ServerAddress)
+	collector := agent.NewMetricCollector(cfg, memStorage)
 	for {
 		select {
 		case <-collector.CollectChan:
