@@ -29,6 +29,12 @@ func NewFileProducer(filename string, restoreContent bool) *FileProducer {
 func (p *FileProducer) WriteMetrics(metrics []metrics.Metrics) error {
 	log.Printf("Saving %d metrics\n", len(metrics))
 
+	// clear old metrics
+	err := p.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+
 	for _, m := range metrics {
 		data, err := json.Marshal(&m)
 		if err != nil {
@@ -58,7 +64,7 @@ func (p *FileProducer) DropRoutine(storage metrics.ServerMetricStorage, interval
 		_ = <-ticker.C
 		err := p.WriteMetrics(storage.GetAllMetrics())
 		if err != nil {
-			log.Println("Error saving metrics: ", err)
+			log.Println("Error while saving metrics: ", err)
 		}
 	}
 }
