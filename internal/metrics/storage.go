@@ -6,6 +6,8 @@ type ServerMetricStorage interface {
 
 	// GetMetric Get metric or error
 	GetMetric(type_, name string) (Metrics, error)
+	// GetAllMetrics Get all metrics as slice
+	GetAllMetrics() []Metrics
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 }
