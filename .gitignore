@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Tools
+statictest
+devopstest
+
 # Binaries
 cmd/agent/main
 cmd/agent/agent
