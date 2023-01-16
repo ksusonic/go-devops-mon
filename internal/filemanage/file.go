@@ -61,7 +61,7 @@ func (p *FileProducer) DropRoutine(storage metrics.ServerMetricStorage, interval
 
 	ticker := time.NewTicker(duration)
 	for {
-		_ = <-ticker.C
+		<-ticker.C
 		err := p.WriteMetrics(storage.GetAllMetrics())
 		if err != nil {
 			log.Println("Error while saving metrics: ", err)
