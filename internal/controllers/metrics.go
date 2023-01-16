@@ -87,6 +87,7 @@ func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request
 	if err != nil {
 		log.Fatal(err)
 	}
+	w.Header().Add("Content-Type", "text/html")
 	_, _ = w.Write(marshall)
 }
 

@@ -31,6 +31,7 @@ func main() {
 	}
 
 	router := chi.NewRouter()
+	router.Use(server.GzipEncoder)
 	metricController := controllers.NewMetricController(memStorage)
 	router.Mount("/", metricController.Router())
 
