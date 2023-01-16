@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/go-chi/chi/v5"
 )
