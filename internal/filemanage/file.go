@@ -2,10 +2,11 @@ package filemanage
 
 import (
 	"encoding/json"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
 	"os"
 	"time"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type FileProducer struct {

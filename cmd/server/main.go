@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/filemanage"
 	"log"
 	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
+	"github.com/ksusonic/go-devops-mon/internal/filemanage"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
