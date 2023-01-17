@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
-	"io"
+	"github.com/go-chi/render"
 	"log"
 	"net/http"
 	"strconv"
@@ -54,16 +54,9 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	var m metrics.Metrics
-	err = json.Unmarshal(body, &m)
-	if err != nil {
-		log.Println(err)
+	m := &metrics.Metrics{}
+	if err := render.Bind(r, m); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
@@ -129,16 +122,9 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 
 // updateMetricHandler — updates metric by Metrics data in body
 func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	var m metrics.Metrics
-	err = json.Unmarshal(body, &m)
-	if err != nil {
-		log.Println(err)
+	m := &metrics.Metrics{}
+	if err := render.Bind(r, m); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
@@ -146,8 +132,8 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusNotImplemented)
 		log.Printf("Unknown metric type %s\n", m.MType)
 	} else {
-		resultMetric := c.Storage.SetMetric(m)
-		log.Printf("Updated %s\n", m.String())
+		resultMetric := c.Storage.SetMetric(*m)
+		log.Printf("Updated %s\n", m)
 
 		marshal, err := json.Marshal(resultMetric)
 		if err != nil {
