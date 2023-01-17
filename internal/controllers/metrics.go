@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/go-chi/render"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 type Controller struct {

@@ -25,15 +25,6 @@ func (m Metrics) Bind(*http.Request) error {
 		return errors.New("missing type of metric")
 	}
 
-	if m.MType == CounterMType {
-		if m.Delta == nil {
-			return errors.New("empty delta value for counter type")
-		}
-	} else {
-		if m.Value == nil {
-			return errors.New("empty value of metric")
-		}
-	}
 	return nil
 }
 

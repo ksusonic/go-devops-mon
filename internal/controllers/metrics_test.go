@@ -20,6 +20,10 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	req, err := http.NewRequest(method, ts.URL+path, body)
 	require.NoError(t, err)
 
+	if body != nil {
+		req.Header.Add("Content-Type", "application/json")
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
