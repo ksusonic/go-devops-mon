@@ -1,5 +1,12 @@
 package metrics
 
+import "time"
+
+type Repository interface {
+	SaveMetrics([]Metrics) error
+	Close() error
+}
+
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
 	SetMetric(Metrics) Metrics
@@ -10,6 +17,8 @@ type ServerMetricStorage interface {
 	GetAllMetrics() []Metrics
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
+
+	RepositoryDropRoutine(Repository, time.Duration)
 }
 
 type AgentMetricStorage interface {

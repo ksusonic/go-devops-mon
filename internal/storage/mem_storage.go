@@ -2,7 +2,9 @@ package storage
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
+	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
@@ -22,6 +24,17 @@ func NewMemStorage() *MemStorage {
 
 	return &MemStorage{
 		typeToNameMapping: typeToNameToMetric,
+	}
+}
+
+func (m *MemStorage) RepositoryDropRoutine(repository metrics.Repository, duration time.Duration) {
+	ticker := time.NewTicker(duration)
+	for {
+		<-ticker.C
+		err := repository.SaveMetrics(m.GetAllMetrics())
+		if err != nil {
+			log.Println("Error while saving metrics to repository: ", err)
+		}
 	}
 }
 

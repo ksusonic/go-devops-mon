@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
-	"github.com/ksusonic/go-devops-mon/internal/filemanage"
+	"github.com/ksusonic/go-devops-mon/internal/filerepository"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
@@ -21,21 +22,21 @@ func main() {
 	memStorage := storage.NewMemStorage()
 
 	if config.StoreFile != "" {
-		if config.RestoreFile {
-			restored, err := filemanage.RestoreMetrics(config.StoreFile)
-			if err != nil {
-				log.Fatalf("Error restoring metrics: %v", err)
-			}
-			memStorage.AddMetrics(restored)
-			log.Printf("Restored %d metrics\n", len(restored))
-		}
-		fileProducer, err := filemanage.NewFileProducer(config.StoreFile, config.RestoreFile)
+		repository, restoredMetrics, err := filerepository.NewFileRepository(config.StoreFile, config.RestoreFile)
 		if err != nil {
-			log.Fatalf("Error creating file producer: %v", err)
+			log.Fatalf("Error in repository: %v", err)
 		}
-		defer fileProducer.Close()
+		if restoredMetrics != nil {
+			memStorage.AddMetrics(*restoredMetrics)
+			log.Printf("Restored %d metrics\n", len(*restoredMetrics))
+		}
+		defer repository.Close()
 
-		go fileProducer.DropRoutine(memStorage, config.FileDropInterval)
+		duration, err := time.ParseDuration(config.FileDropInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go memStorage.RepositoryDropRoutine(repository, duration)
 		log.Printf("Enabled drop metrics to %s\n", config.StoreFile)
 	}
 
