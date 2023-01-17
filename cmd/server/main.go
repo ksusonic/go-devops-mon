@@ -13,17 +13,26 @@ import (
 )
 
 func main() {
-	config := server.NewConfig()
+	config, err := server.NewConfig()
+	if err != nil {
+		log.Fatalf("Error reading config: %v", err)
+	}
 
 	memStorage := storage.NewMemStorage()
 
 	if config.StoreFile != "" {
 		if config.RestoreFile {
-			restored := filemanage.RestoreMetrics(config.StoreFile)
+			restored, err := filemanage.RestoreMetrics(config.StoreFile)
+			if err != nil {
+				log.Fatalf("Error restoring metrics: %v", err)
+			}
 			memStorage.AddMetrics(restored)
 			log.Printf("Restored %d metrics\n", len(restored))
 		}
-		fileProducer := filemanage.NewFileProducer(config.StoreFile, config.RestoreFile)
+		fileProducer, err := filemanage.NewFileProducer(config.StoreFile, config.RestoreFile)
+		if err != nil {
+			log.Fatalf("Error creating file producer: %v", err)
+		}
 		defer fileProducer.Close()
 
 		go fileProducer.DropRoutine(memStorage, config.FileDropInterval)
@@ -36,7 +45,7 @@ func main() {
 	router.Mount("/", metricController.Router())
 
 	log.Printf("Server started on %s\n", config.Address)
-	err := http.ListenAndServe(config.Address, router)
+	err = http.ListenAndServe(config.Address, router)
 	if err != nil {
 		log.Fatal(err)
 	}

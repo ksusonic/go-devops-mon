@@ -14,17 +14,17 @@ type FileProducer struct {
 	DropChan <-chan time.Time
 }
 
-func NewFileProducer(filename string, restoreContent bool) *FileProducer {
+func NewFileProducer(filename string, restoreContent bool) (*FileProducer, error) {
 	flag := os.O_WRONLY | os.O_APPEND
 	if !restoreContent {
 		flag |= os.O_CREATE
 	}
 	file, err := os.OpenFile(filename, flag, 0777)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return &FileProducer{file: file}
+	return &FileProducer{file: file}, nil
 }
 
 func (p *FileProducer) WriteMetrics(metrics []metrics.Metrics) error {

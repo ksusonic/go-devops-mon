@@ -8,9 +8,16 @@ import (
 )
 
 func main() {
-	cfg := agent.NewConfig()
+	cfg, err := agent.NewConfig()
+	if err != nil {
+		log.Fatalf("Error reading config: %v", err)
+	}
 	memStorage := storage.NewMemStorage()
-	collector := agent.NewMetricCollector(cfg, memStorage)
+	collector, err := agent.NewMetricCollector(cfg, memStorage)
+	if err != nil {
+		log.Fatalf("Error in metric collector: %v", err)
+	}
+
 	for {
 		select {
 		case <-collector.CollectChan:

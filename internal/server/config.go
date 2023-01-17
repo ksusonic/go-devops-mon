@@ -2,7 +2,6 @@ package server
 
 import (
 	"flag"
-	"log"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -14,7 +13,7 @@ type Config struct {
 	RestoreFile      bool   `env:"RESTORE"`
 }
 
-func NewConfig() *Config {
+func NewConfig() (*Config, error) {
 	var cfg Config
 
 	flag.StringVar(&cfg.Address, "a", "127.0.0.1:8080", "address of server with port if needed")
@@ -25,8 +24,8 @@ func NewConfig() *Config {
 
 	err := env.Parse(&cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return &cfg
+	return &cfg, nil
 }
