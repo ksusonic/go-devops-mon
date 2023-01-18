@@ -13,7 +13,7 @@ type FileRepository struct {
 }
 
 func NewFileRepository(filename string) (*FileRepository, error) {
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
 		data := scanner.Bytes()
 		var metric metrics.Metrics
 		err := json.Unmarshal(data, &metric)
-		if err != nil {
+		if err == nil {
 			result = append(result, metric)
 		}
 		// ignore incorrect metric records
