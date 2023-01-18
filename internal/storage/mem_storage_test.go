@@ -16,7 +16,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}{
 		{
 			name:       "add to empty test",
-			memStorage: NewMemStorage(),
+			memStorage: NewMemStorage(nil),
 		},
 	}
 	for _, tt := range tests {
@@ -50,7 +50,7 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	}{
 		{
 			name:       "simple test #1",
-			memStorage: NewMemStorage(),
+			memStorage: NewMemStorage(nil),
 			args: metrics.Metrics{
 				ID:    "PauseTotalNs",
 				MType: metrics.GaugeMType,

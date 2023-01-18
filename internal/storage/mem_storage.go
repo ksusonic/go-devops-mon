@@ -13,9 +13,10 @@ type TypeToNameToMetric map[string]map[string]metrics.Metrics
 
 type MemStorage struct {
 	typeToNameMapping TypeToNameToMetric
+	repository        metrics.Repository
 }
 
-func NewMemStorage() *MemStorage {
+func NewMemStorage(repository metrics.Repository) *MemStorage {
 	var typeToNameToMetric = make(TypeToNameToMetric)
 
 	// init map for known types
@@ -24,14 +25,19 @@ func NewMemStorage() *MemStorage {
 
 	return &MemStorage{
 		typeToNameMapping: typeToNameToMetric,
+		repository:        repository,
 	}
 }
 
-func (m *MemStorage) RepositoryDropRoutine(repository metrics.Repository, duration time.Duration) {
+func (m *MemStorage) RepositoryDropRoutine(duration time.Duration) {
+	if m.repository == nil {
+		log.Fatal("Failed to launch RepositoryDropRoutine: repository is nil")
+	}
+
 	ticker := time.NewTicker(duration)
 	for {
 		<-ticker.C
-		err := repository.SaveMetrics(m.GetAllMetrics())
+		err := m.repository.SaveMetrics(m.GetAllMetrics())
 		if err != nil {
 			log.Println("Error while saving metrics to repository: ", err)
 		}

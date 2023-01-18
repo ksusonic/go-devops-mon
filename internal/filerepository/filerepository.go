@@ -12,25 +12,29 @@ type FileRepository struct {
 	file *os.File
 }
 
-func NewFileRepository(filename string, restoreContent bool) (*FileRepository, *[]metrics.Metrics, error) {
-	var restoredMetrics *[]metrics.Metrics = nil
-	flag := os.O_WRONLY | os.O_APPEND
-	if restoreContent {
-		restoreMetrics, err := restoreMetrics(filename)
-		if err != nil {
-			return nil, nil, err
-		}
-		restoredMetrics = &restoreMetrics
-	} else {
-		flag |= os.O_CREATE
-	}
-
-	file, err := os.OpenFile(filename, flag, 0777)
+func NewFileRepository(filename string) (*FileRepository, error) {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
 	if err != nil {
-		return nil, restoredMetrics, err
+		return nil, err
 	}
 
-	return &FileRepository{file: file}, restoredMetrics, nil
+	return &FileRepository{file: file}, nil
+}
+
+func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
+	var result []metrics.Metrics
+
+	scanner := bufio.NewScanner(p.file)
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		var metric metrics.Metrics
+		err := json.Unmarshal(data, &metric)
+		if err != nil {
+			result = append(result, metric)
+		}
+		// ignore incorrect metric records
+	}
+	return result
 }
 
 func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
@@ -58,24 +62,4 @@ func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
 
 func (p *FileRepository) Close() error {
 	return p.file.Close()
-}
-
-func restoreMetrics(filename string) ([]metrics.Metrics, error) {
-	var result []metrics.Metrics
-	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0777)
-	if err != nil {
-		return nil, err
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		data := scanner.Bytes()
-		var metric metrics.Metrics
-		err := json.Unmarshal(data, &metric)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, metric)
-	}
-	return result, nil
 }

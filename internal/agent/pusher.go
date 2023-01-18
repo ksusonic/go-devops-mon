@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -12,32 +13,35 @@ import (
 
 const contentType = "application/json"
 
-func (m MetricCollector) sendMetric(metric metrics.Metrics) {
+func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 	marshall, err := json.Marshal(metric)
 	if err != nil {
-		log.Printf("Error marshalling metric: %v\n", err)
+		return fmt.Errorf("error marshalling metric: %v", err)
 	}
 	r, _ := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
 	r.Header.Add("Content-Type", contentType)
 
 	response, err := m.Client.Do(r)
 	if err != nil {
-		log.Printf("Error sending push metric request: %v\n", err)
-	} else {
-		if response.StatusCode != http.StatusOK {
-			readBody, err := io.ReadAll(response.Body)
-			if err != nil {
-				log.Printf("status %s while sending metric\n", response.Status)
-			} else {
-				log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
-			}
-		}
-		response.Body.Close()
+		return fmt.Errorf("error sending push metric request: %v", err)
 	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		readBody, err := io.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("status %s while sending metric", response.Status)
+		}
+		log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
+	}
+	return nil
 }
 
 func (m MetricCollector) PushMetrics() {
 	for _, metric := range m.Storage.GetAllMetrics() {
-		m.sendMetric(metric)
+		err := m.sendMetric(metric)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }

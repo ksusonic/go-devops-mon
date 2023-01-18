@@ -4,6 +4,7 @@ import "time"
 
 type Repository interface {
 	SaveMetrics([]Metrics) error
+	ReadCurrentState() []Metrics
 	Close() error
 }
 
@@ -18,7 +19,7 @@ type ServerMetricStorage interface {
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
 	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
 
-	RepositoryDropRoutine(Repository, time.Duration)
+	RepositoryDropRoutine(time.Duration)
 }
 
 type AgentMetricStorage interface {

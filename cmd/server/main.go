@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 	"log"
 	"net/http"
 	"time"
@@ -19,29 +20,36 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
-	memStorage := storage.NewMemStorage()
+	repository, err := filerepository.NewFileRepository(config.StoreFile)
+	if err != nil {
+		log.Fatalf("Error in repository: %v", err)
+	}
+
+	memStorage := storage.NewMemStorage(repository)
 
 	if config.StoreFile != "" {
-		repository, restoredMetrics, err := filerepository.NewFileRepository(config.StoreFile, config.RestoreFile)
-		if err != nil {
-			log.Fatalf("Error in repository: %v", err)
-		}
-		if restoredMetrics != nil {
-			memStorage.AddMetrics(*restoredMetrics)
-			log.Printf("Restored %d metrics\n", len(*restoredMetrics))
-		}
 		defer repository.Close()
+
+		if config.RestoreFile {
+			restoredMetrics := repository.ReadCurrentState()
+			if len(restoredMetrics) > 0 {
+				memStorage.AddMetrics(restoredMetrics)
+				log.Printf("Restored %d metrics\n", len(restoredMetrics))
+			} else {
+				log.Println("No metrics to restore")
+			}
+		}
 
 		duration, err := time.ParseDuration(config.FileDropInterval)
 		if err != nil {
 			log.Fatal(err)
 		}
-		go memStorage.RepositoryDropRoutine(repository, duration)
+		go memStorage.RepositoryDropRoutine(duration)
 		log.Printf("Enabled drop metrics to %s\n", config.StoreFile)
 	}
 
 	router := chi.NewRouter()
-	router.Use(server.GzipEncoder)
+	router.Use(middleware.GzipEncoder)
 	metricController := controllers.NewMetricController(memStorage)
 	router.Mount("/", metricController.Router())
 
