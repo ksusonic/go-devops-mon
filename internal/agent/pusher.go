@@ -38,11 +38,16 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 }
 
 func (m MetricCollector) PushMetrics() error {
+	var accumulatedErrs string
 	for _, metric := range m.Storage.GetAllMetrics() {
 		err := m.sendMetric(metric)
 		if err != nil {
-			return err
+			accumulatedErrs += err.Error() + "\n"
 		}
+	}
+
+	if accumulatedErrs != "" {
+		return fmt.Errorf(accumulatedErrs)
 	}
 	return nil
 }
