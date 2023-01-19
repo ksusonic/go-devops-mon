@@ -85,16 +85,14 @@ func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
 }
 
 func (m *MemStorage) GetMetric(type_, name string) (metrics.Metrics, error) {
-	_, ok := m.typeToNameMapping[type_]
-	if !ok {
-		return metrics.Metrics{}, fmt.Errorf("no metric type '%s'", type_)
+	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
+		ID:    name,
+		MType: type_,
+	})
+	if metric == nil {
+		return metrics.Metrics{}, fmt.Errorf("metric %s of type %s not found", name, type_)
 	}
-	value, ok := m.typeToNameMapping[type_][name]
-	if ok {
-		return value, nil
-	} else {
-		return metrics.Metrics{}, fmt.Errorf("no metric '%s'", name)
-	}
+	return *metric, nil
 }
 
 func (m *MemStorage) GetAllMetrics() []metrics.Metrics {
@@ -128,11 +126,11 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 func (m *MemStorage) IncPollCount() {
 	var previousValue int64 = 0
 
-	if metric := m.typeToNameMapping.getMetric(metrics.Metrics{
+	if currentMetric := m.typeToNameMapping.getMetric(metrics.Metrics{
 		ID:    "PollCount",
 		MType: metrics.CounterMType,
-	}); metric != nil {
-		previousValue = *metric.Delta
+	}); currentMetric != nil {
+		previousValue = *currentMetric.Delta
 	}
 
 	value := previousValue + 1

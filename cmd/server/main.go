@@ -1,14 +1,16 @@
 package main
 
 import (
-	"github.com/go-chi/chi/v5"
+	"log"
+	"net/http"
+
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
 	"github.com/ksusonic/go-devops-mon/internal/filerepository"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
-	"log"
-	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
