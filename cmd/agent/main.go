@@ -12,7 +12,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
-	memStorage := storage.NewMemStorage(nil)
+	memStorage := storage.NewMemStorage()
 	collector, err := agent.NewMetricCollector(cfg, memStorage)
 	if err != nil {
 		log.Fatalf("Error in metric collector: %v", err)

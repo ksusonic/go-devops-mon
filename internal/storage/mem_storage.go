@@ -9,19 +9,32 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-type TypeToNameToMetric map[string]map[string]metrics.Metrics
-
 type MemStorage struct {
 	typeToNameMapping TypeToNameToMetric
 	repository        metrics.Repository
 }
 
-func NewMemStorage(repository metrics.Repository) *MemStorage {
+func NewMemStorage() *MemStorage {
+	return &MemStorage{
+		typeToNameMapping: make(TypeToNameToMetric),
+		repository:        nil,
+	}
+}
+
+func NewMemStorageWithRepository(repository metrics.Repository, needToRestoreMetrics bool) *MemStorage {
 	var typeToNameToMetric = make(TypeToNameToMetric)
 
-	// init map for known types
-	typeToNameToMetric[metrics.GaugeMType] = make(map[string]metrics.Metrics)
-	typeToNameToMetric[metrics.CounterMType] = make(map[string]metrics.Metrics)
+	if needToRestoreMetrics {
+		restored := repository.ReadCurrentState()
+		if len(restored) > 0 {
+			for _, m := range restored {
+				typeToNameToMetric.safeInsert(m)
+			}
+			log.Printf("Restored %d metrics\n", len(restored))
+		} else {
+			log.Println("No metrics to restore")
+		}
+	}
 
 	return &MemStorage{
 		typeToNameMapping: typeToNameToMetric,
@@ -45,25 +58,24 @@ func (m *MemStorage) RepositoryDropRoutine(duration time.Duration) {
 }
 
 func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
-	var result *metrics.Metrics
+	var result metrics.Metrics
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
-		_, ok := m.typeToNameMapping[metric.MType][metric.ID]
-		if ok {
+		if m.typeToNameMapping.hasMetric(metric) {
 			lastValue = *m.typeToNameMapping[metric.MType][metric.ID].Delta
 		}
 		value := lastValue + *metric.Delta
-		result = &metrics.Metrics{
+		result = metrics.Metrics{
 			ID:    metric.ID,
 			MType: metrics.CounterMType,
 			Delta: &value,
 		}
-		m.typeToNameMapping[metric.MType][metric.ID] = *result
+		m.typeToNameMapping.safeInsert(result)
 	} else {
-		result = &metric
-		m.typeToNameMapping[metric.MType][metric.ID] = *result
+		result = metric
+		m.typeToNameMapping.safeInsert(result)
 	}
-	return *result
+	return result
 }
 
 func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
@@ -114,24 +126,58 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 }
 
 func (m *MemStorage) IncPollCount() {
-	metric, ok := m.typeToNameMapping[metrics.CounterMType]["PollCount"]
 	var previousValue int64 = 0
-	if ok {
+
+	if metric := m.typeToNameMapping.getMetric(metrics.Metrics{
+		ID:    "PollCount",
+		MType: metrics.CounterMType,
+	}); metric != nil {
 		previousValue = *metric.Delta
 	}
 
 	value := previousValue + 1
-	m.typeToNameMapping[metrics.CounterMType]["PollCount"] = metrics.Metrics{
+	m.typeToNameMapping.safeInsert(metrics.Metrics{
 		ID:    "PollCount",
 		MType: metrics.CounterMType,
 		Delta: &value,
-	}
+	})
 }
 func (m *MemStorage) RandomizeRandomValue() {
 	value := rand.Float64()
-	m.typeToNameMapping[metrics.GaugeMType]["RandomValue"] = metrics.Metrics{
+	m.typeToNameMapping.safeInsert(metrics.Metrics{
 		ID:    "RandomValue",
 		MType: metrics.GaugeMType,
 		Value: &value,
+	})
+}
+
+type TypeToNameToMetric map[string]map[string]metrics.Metrics
+
+func (t *TypeToNameToMetric) safeInsert(m metrics.Metrics) {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		(*t)[m.MType] = make(map[string]metrics.Metrics)
 	}
+	(*t)[m.MType][m.ID] = m
+}
+
+func (t *TypeToNameToMetric) hasMetric(m metrics.Metrics) bool {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		return false
+	}
+	_, ok = (*t)[m.MType][m.ID]
+	return ok
+}
+
+func (t *TypeToNameToMetric) getMetric(m metrics.Metrics) *metrics.Metrics {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		return nil
+	}
+	metric, ok := (*t)[m.MType][m.ID]
+	if !ok {
+		return nil
+	}
+	return &metric
 }

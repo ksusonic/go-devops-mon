@@ -2,15 +2,17 @@ package server
 
 import (
 	"flag"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
-	Address          string `env:"ADDRESS"`
-	FileDropInterval string `env:"STORE_INTERVAL"`
-	StoreFile        string `env:"STORE_FILE"`
-	RestoreFile      bool   `env:"RESTORE"`
+	Address                  string        `env:"ADDRESS"`
+	FileDropInterval         string        `env:"STORE_INTERVAL"`
+	FileDropIntervalDuration time.Duration `env:"-"`
+	StoreFile                string        `env:"STORE_FILE"`
+	RestoreFile              bool          `env:"RESTORE"`
 }
 
 func NewConfig() (*Config, error) {
@@ -23,6 +25,10 @@ func NewConfig() (*Config, error) {
 	flag.Parse()
 
 	err := env.Parse(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	cfg.FileDropIntervalDuration, err = time.ParseDuration(cfg.FileDropInterval)
 	if err != nil {
 		return nil, err
 	}
