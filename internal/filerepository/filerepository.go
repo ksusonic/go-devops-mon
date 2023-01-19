@@ -46,6 +46,10 @@ func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
 	if err != nil {
 		return err
 	}
+	_, err = p.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
 
 	for _, m := range metrics {
 		data, err := json.Marshal(&m)
