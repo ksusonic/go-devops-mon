@@ -3,9 +3,10 @@ package filerepository
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
 	"os"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type FileRepository struct {

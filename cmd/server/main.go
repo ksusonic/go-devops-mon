@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 	"log"
 	"net/http"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
 	"github.com/ksusonic/go-devops-mon/internal/filerepository"
 	"github.com/ksusonic/go-devops-mon/internal/server"
+	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/go-chi/chi/v5"

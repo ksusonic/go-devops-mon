@@ -25,7 +25,10 @@ func main() {
 			collector.CollectStat()
 		case <-collector.PushChan:
 			log.Println("pushing metrics...")
-			collector.PushMetrics()
+			err := collector.PushMetrics()
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }

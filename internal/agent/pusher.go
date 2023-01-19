@@ -37,11 +37,12 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 	return nil
 }
 
-func (m MetricCollector) PushMetrics() {
+func (m MetricCollector) PushMetrics() error {
 	for _, metric := range m.Storage.GetAllMetrics() {
 		err := m.sendMetric(metric)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
 	}
+	return nil
 }
