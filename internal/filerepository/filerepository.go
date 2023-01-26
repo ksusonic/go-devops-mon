@@ -65,6 +65,10 @@ func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
 	return nil
 }
 
+func (p *FileRepository) Info() string {
+	return "file: " + p.file.Name()
+}
+
 func (p *FileRepository) Close() error {
 	return p.file.Close()
 }

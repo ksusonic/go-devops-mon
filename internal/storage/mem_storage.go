@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -14,45 +15,52 @@ type MemStorage struct {
 	repository        metrics.Repository
 }
 
-func NewMemStorage() *MemStorage {
-	return &MemStorage{
+type MemStorageRepository struct {
+	Repository         metrics.Repository
+	DropInterval       time.Duration
+	NeedRestoreMetrics bool
+}
+
+func NewMemStorage(repository *MemStorageRepository) *MemStorage {
+	memStorage := MemStorage{
 		typeToNameMapping: make(TypeToNameToMetric),
 		repository:        nil,
 	}
-}
 
-func NewMemStorageWithRepository(repository metrics.Repository, needToRestoreMetrics bool) *MemStorage {
-	var typeToNameToMetric = make(TypeToNameToMetric)
+	if repository != nil {
+		memStorage.repository = repository.Repository
 
-	if needToRestoreMetrics {
-		restored := repository.ReadCurrentState()
-		if len(restored) > 0 {
-			for _, m := range restored {
-				typeToNameToMetric.safeInsert(m)
+		if repository.NeedRestoreMetrics {
+			restored := memStorage.repository.ReadCurrentState()
+			if len(restored) > 0 {
+				for _, m := range restored {
+					memStorage.typeToNameMapping.safeInsert(m)
+				}
+				log.Printf("Restored %d metrics\n", len(restored))
+			} else {
+				log.Println("No metrics to restore")
 			}
-			log.Printf("Restored %d metrics\n", len(restored))
-		} else {
-			log.Println("No metrics to restore")
 		}
+
+		go memStorage.RepositoryDropRoutine(context.Background(), repository.DropInterval)
 	}
 
-	return &MemStorage{
-		typeToNameMapping: typeToNameToMetric,
-		repository:        repository,
-	}
+	return &memStorage
 }
 
-func (m *MemStorage) RepositoryDropRoutine(duration time.Duration) {
-	if m.repository == nil {
-		log.Fatal("Failed to launch RepositoryDropRoutine: repository is nil")
-	}
-
+func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Duration) {
+	log.Printf("Started repository drop routine to %s with interval %s\n", m.repository.Info(), duration)
 	ticker := time.NewTicker(duration)
 	for {
-		<-ticker.C
-		err := m.repository.SaveMetrics(m.GetAllMetrics())
-		if err != nil {
-			log.Println("Error while saving metrics to repository: ", err)
+		select {
+		case <-ticker.C:
+			err := m.repository.SaveMetrics(m.GetAllMetrics())
+			if err != nil {
+				log.Println("Error while saving metrics to repository: ", err)
+			}
+		case <-ctx.Done():
+			log.Println("Finished repository routine")
+			return
 		}
 	}
 }

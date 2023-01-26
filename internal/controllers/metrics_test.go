@@ -36,7 +36,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 }
 
 func TestController_updateMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
 	router := chi.NewRouter()
 	r := NewMetricController(memStorage)
 	router.Mount("/", r.Router())
@@ -60,7 +60,7 @@ func TestController_updateMetricPathHandler(t *testing.T) {
 }
 
 func TestController_updateMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
 	router := chi.NewRouter()
 	r := NewMetricController(memStorage)
 	router.Mount("/", r.Router())
@@ -137,7 +137,7 @@ func TestController_updateMetricHandler(t *testing.T) {
 }
 
 func TestController_getMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
 	router := chi.NewRouter()
 	r := NewMetricController(memStorage)
 	router.Mount("/", r.Router())
@@ -153,7 +153,7 @@ func TestController_getMetricPathHandler(t *testing.T) {
 }
 
 func TestController_getMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
 	router := chi.NewRouter()
 	r := NewMetricController(memStorage)
 	router.Mount("/", r.Router())
@@ -192,7 +192,7 @@ func TestController_getMetricHandler(t *testing.T) {
 }
 
 func TestController_getAllMetricsHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
 	router := chi.NewRouter()
 	r := NewMetricController(memStorage)
 	router.Mount("/", r.Router())

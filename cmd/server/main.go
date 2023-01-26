@@ -25,12 +25,11 @@ func main() {
 	}
 	defer repository.Close()
 
-	memStorage := storage.NewMemStorageWithRepository(repository, config.RestoreFile)
-
-	if config.StoreFile != "" {
-		go memStorage.RepositoryDropRoutine(config.FileDropIntervalDuration)
-		log.Printf("Enabled drop metrics to %s\n", config.StoreFile)
-	}
+	memStorage := storage.NewMemStorage(&storage.MemStorageRepository{
+		Repository:         repository,
+		NeedRestoreMetrics: config.RestoreFile,
+		DropInterval:       config.FileDropIntervalDuration,
+	})
 
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
