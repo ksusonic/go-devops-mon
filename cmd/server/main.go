@@ -19,17 +19,22 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
-	repository, err := filerepository.NewFileRepository(config.StoreFile)
-	if err != nil {
-		log.Fatalf("Error in repository: %v", err)
-	}
-	defer repository.Close()
+	var repository *storage.MemStorageRepository
+	if config.StoreFile != "" {
+		repository = &storage.MemStorageRepository{
+			Repository:         nil,
+			DropInterval:       config.FileDropIntervalDuration,
+			NeedRestoreMetrics: config.RestoreFile,
+		}
 
-	memStorage := storage.NewMemStorage(&storage.MemStorageRepository{
-		Repository:         repository,
-		NeedRestoreMetrics: config.RestoreFile,
-		DropInterval:       config.FileDropIntervalDuration,
-	})
+		repository.Repository, err = filerepository.NewFileRepository(config.StoreFile)
+		if err != nil {
+			log.Fatalf("Error in repository: %v", err)
+		}
+		defer repository.Repository.Close()
+	}
+
+	memStorage := storage.NewMemStorage(repository)
 
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)

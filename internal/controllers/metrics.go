@@ -50,7 +50,10 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 	} else {
 		stringValue = strconv.FormatFloat(*value.Value, 'f', -1, 64)
 	}
-	_, _ = w.Write([]byte(stringValue))
+	_, err = w.Write([]byte(stringValue))
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +75,10 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshal)
+	_, err = w.Write(marshal)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request) {
@@ -81,7 +87,10 @@ func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request
 		log.Fatal(err)
 	}
 	w.Header().Add("Content-Type", "text/html")
-	_, _ = w.Write(marshall)
+	_, err = w.Write(marshall)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 // updateMetricPathHandler — updates metric by type, name and value
@@ -141,6 +150,9 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(marshal)
+		_, err = w.Write(marshal)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
