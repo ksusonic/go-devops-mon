@@ -16,53 +16,55 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}{
 		{
 			name:       "add to empty test",
-			memStorage: NewMemStorage(),
+			memStorage: NewMemStorage(nil),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric("counter", "PollCount")
+			_, err := tt.memStorage.GetMetric(metrics.CounterMType, "PollCount")
 			require.Error(t, err)
 
-			tt.memStorage.SetMetric(metrics.AtomicMetric{
-				Name:  "PollCount",
-				Type:  metrics.CounterType,
-				Value: int64(1),
+			var number int64 = 1
+			tt.memStorage.SetMetric(metrics.Metrics{
+				ID:    "PollCount",
+				MType: metrics.CounterMType,
+				Delta: &number,
 			})
-			value, err := tt.memStorage.GetMetric("counter", "PollCount")
+			value, err := tt.memStorage.GetMetric(metrics.CounterMType, "PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
 			var expected int64 = 1
-			require.IsType(t, expected, value.Value)
-			assert.Equal(t, expected, value.Value)
+			require.IsType(t, expected, *value.Delta)
+			assert.Equal(t, expected, *value.Delta)
 		})
 	}
 }
 
 func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
+	var value = 7.0023
 
 	tests := []struct {
 		name       string
 		memStorage *MemStorage
-		args       metrics.AtomicMetric
+		args       metrics.Metrics
 	}{
 		{
 			name:       "simple test #1",
-			memStorage: NewMemStorage(),
-			args: metrics.AtomicMetric{
-				Name:  "PauseTotalNs",
-				Type:  metrics.GaugeType,
-				Value: 7.0023,
+			memStorage: NewMemStorage(nil),
+			args: metrics.Metrics{
+				ID:    "PauseTotalNs",
+				MType: metrics.GaugeMType,
+				Value: &value,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(tt.args.Type, tt.args.Name)
+			_, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
 			require.Error(t, err)
 
 			tt.memStorage.SetMetric(tt.args)
-			result, err := tt.memStorage.GetMetric(tt.args.Type, tt.args.Name)
+			result, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
 			require.NoError(t, err)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.args, result)

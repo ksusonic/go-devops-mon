@@ -2,23 +2,22 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/agent"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
-const (
-	CollectInterval     = time.Second * 2
-	PushInterval        = time.Second * 10
-	ServerRequestMethod = "http"
-	ServerHost          = "localhost"
-	ServerPort          = 8080
-)
-
 func main() {
-	memStorage := storage.NewMemStorage()
-	collector := agent.NewMetricCollector(memStorage, CollectInterval, PushInterval, ServerRequestMethod, ServerHost, ServerPort)
+	cfg, err := agent.NewConfig()
+	if err != nil {
+		log.Fatalf("Error reading config: %v", err)
+	}
+	memStorage := storage.NewMemStorage(nil)
+	collector, err := agent.NewMetricCollector(cfg, memStorage)
+	if err != nil {
+		log.Fatalf("Error in metric collector: %v", err)
+	}
+
 	for {
 		select {
 		case <-collector.CollectChan:
@@ -26,7 +25,10 @@ func main() {
 			collector.CollectStat()
 		case <-collector.PushChan:
 			log.Println("pushing metrics...")
-			collector.PushMetrics()
+			err := collector.PushMetrics()
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }

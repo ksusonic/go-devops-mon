@@ -1,44 +1,53 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
-	"net/url"
-	"strconv"
+	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-const contentType = "text/plain"
+const contentType = "application/json"
 
-func (m MetricCollector) makePushURL(metricName, metricType, metricValue string) string {
-	u := url.URL{
-		Scheme: m.ServerRequestScheme,
-		Host:   m.ServerHost + ":" + strconv.FormatInt(int64(m.ServerPort), 10),
-		Path:   "/update/" + metricType + "/" + metricName + "/" + metricValue,
-	}
-	return u.String()
-}
-
-func (m MetricCollector) sendMetric(path string) {
-	response, err := m.Client.Post(path, contentType, nil)
+func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
+	marshall, err := json.Marshal(metric)
 	if err != nil {
-		log.Printf("Error sending push metric request: %v\n", err)
-	} else {
-		response.Body.Close()
+		return fmt.Errorf("error marshalling metric: %v", err)
 	}
+	r, _ := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
+	r.Header.Add("Content-Type", contentType)
+
+	response, err := m.Client.Do(r)
+	if err != nil {
+		return fmt.Errorf("error sending push metric request: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		readBody, err := io.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("status %s while sending metric", response.Status)
+		}
+		log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
+	}
+	return nil
 }
 
-func (m MetricCollector) PushMetrics() {
+func (m MetricCollector) PushMetrics() error {
+	var accumulatedErrs string
 	for _, metric := range m.Storage.GetAllMetrics() {
-		var stringMetricValue string
-		if metric.Type == metrics.GaugeType {
-			stringMetricValue = strconv.FormatFloat(metric.Value.(float64), 'f', -1, 64)
-		} else if metric.Type == metrics.CounterType {
-			stringMetricValue = strconv.FormatInt(metric.Value.(int64), 10)
-		} else {
-			log.Fatalf("Unknown metric type: %s\n", metric.Type)
+		err := m.sendMetric(metric)
+		if err != nil {
+			accumulatedErrs += err.Error() + "\n"
 		}
-		var path = m.makePushURL(metric.Name, metric.Type, stringMetricValue)
-		m.sendMetric(path)
 	}
+
+	if accumulatedErrs != "" {
+		return fmt.Errorf(accumulatedErrs)
+	}
+	return nil
 }

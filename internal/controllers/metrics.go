@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 type Controller struct {
@@ -17,10 +19,13 @@ type Controller struct {
 func (c *Controller) Router() *chi.Mux {
 	router := chi.NewRouter()
 
-	router.Get("/value/{type}/{name}", c.getMetricHandler)
+	router.Get("/value/{type}/{name}", c.getMetricPathHandler)
 	router.Get("/", c.getAllMetricsHandler)
 
-	router.Post("/update/{type}/{name}/{value}", c.updateMetricHandler)
+	router.Post("/update/{type}/{name}/{value}", c.updateMetricPathHandler)
+
+	router.Post("/update/", c.updateMetricHandler)
+	router.Post("/value/", c.getMetricHandler)
 
 	return router
 }
@@ -31,7 +36,7 @@ func NewMetricController(storage metrics.ServerMetricStorage) *Controller {
 	}
 }
 
-func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
 	value, err := c.Storage.GetMetric(reqType, reqName)
@@ -40,12 +45,40 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var stringValue string
-	if reqType == metrics.CounterType {
-		stringValue = strconv.FormatInt(value.Value.(int64), 10)
+	if reqType == metrics.CounterMType {
+		stringValue = strconv.FormatInt(*value.Delta, 10)
 	} else {
-		stringValue = strconv.FormatFloat(value.Value.(float64), 'f', -1, 64)
+		stringValue = strconv.FormatFloat(*value.Value, 'f', -1, 64)
 	}
-	_, _ = w.Write([]byte(stringValue))
+	_, err = w.Write([]byte(stringValue))
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
+	m := &metrics.Metrics{}
+	if err := render.Bind(r, m); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	value, err := c.Storage.GetMetric(m.MType, m.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	marshal, err := json.Marshal(value)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(marshal)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request) {
@@ -53,41 +86,73 @@ func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, _ = w.Write(marshall)
+	w.Header().Add("Content-Type", "text/html")
+	_, err = w.Write(marshall)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
-// updateMetricHandler — обработчик обновления метрики по типу и названию
-func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
+// updateMetricPathHandler — updates metric by type, name and value
+func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
 	reqRawValue := chi.URLParam(r, "value")
 
-	if reqType == metrics.GaugeType {
+	if reqType == metrics.GaugeMType {
 		value, err := strconv.ParseFloat(reqRawValue, 64)
 		if err != nil {
 			log.Printf("Incorrect value: %s\n", reqRawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		c.Storage.SetMetric(metrics.AtomicMetric{
-			Name:  reqName,
-			Type:  reqType,
-			Value: value,
+		c.Storage.SetMetric(metrics.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Value: &value,
 		})
 		log.Printf("Updated gauge %s: %f\n", reqName, value)
-	} else if reqType == metrics.CounterType {
+	} else if reqType == metrics.CounterMType {
 		value, err := strconv.ParseInt(reqRawValue, 10, 64)
 		if err != nil {
 			log.Printf("Incorrect value: %s\n", reqRawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		c.Storage.SetMetric(metrics.AtomicMetric{
-			Name:  reqName,
-			Type:  reqType,
-			Value: value,
+		c.Storage.SetMetric(metrics.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Delta: &value,
 		})
 		log.Printf("Updated counter %s: %d\n", reqName, value)
 	} else {
 		log.Println("unexpected metric type!")
 		w.WriteHeader(http.StatusNotImplemented)
+	}
+}
+
+// updateMetricHandler — updates metric by Metrics data in body
+func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
+	m := &metrics.Metrics{}
+	if err := render.Bind(r, m); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
+		w.WriteHeader(http.StatusNotImplemented)
+		log.Printf("Unknown metric type %s\n", m.MType)
+	} else {
+		resultMetric := c.Storage.SetMetric(*m)
+		log.Printf("Updated %s\n", m)
+
+		marshal, err := json.Marshal(resultMetric)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(marshal)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }

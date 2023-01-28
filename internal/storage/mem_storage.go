@@ -1,68 +1,110 @@
 package storage
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"math/rand"
+	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-type TypeToNameToMetric map[string]map[string]metrics.AtomicMetric
-
 type MemStorage struct {
 	typeToNameMapping TypeToNameToMetric
+	repository        metrics.Repository
 }
 
-func NewMemStorage() *MemStorage {
-	var typeToNameToMetric = make(TypeToNameToMetric)
+type MemStorageRepository struct {
+	Repository         metrics.Repository
+	DropInterval       time.Duration
+	NeedRestoreMetrics bool
+}
 
-	// init map for known types
-	typeToNameToMetric[metrics.GaugeType] = make(map[string]metrics.AtomicMetric)
-	typeToNameToMetric[metrics.CounterType] = make(map[string]metrics.AtomicMetric)
+func NewMemStorage(repository *MemStorageRepository) *MemStorage {
+	memStorage := MemStorage{
+		typeToNameMapping: make(TypeToNameToMetric),
+		repository:        nil,
+	}
 
-	return &MemStorage{
-		typeToNameMapping: typeToNameToMetric,
+	if repository != nil {
+		memStorage.repository = repository.Repository
+
+		if repository.NeedRestoreMetrics {
+			restored := memStorage.repository.ReadCurrentState()
+			if len(restored) > 0 {
+				for _, m := range restored {
+					memStorage.typeToNameMapping.safeInsert(m)
+				}
+				log.Printf("Restored %d metrics\n", len(restored))
+			} else {
+				log.Println("No metrics to restore")
+			}
+		}
+
+		go memStorage.RepositoryDropRoutine(context.Background(), repository.DropInterval)
+	}
+
+	return &memStorage
+}
+
+func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Duration) {
+	log.Printf("Started repository drop routine to %s with interval %s\n", m.repository.Info(), duration)
+	ticker := time.NewTicker(duration)
+	for {
+		select {
+		case <-ticker.C:
+			err := m.repository.SaveMetrics(m.GetAllMetrics())
+			if err != nil {
+				log.Println("Error while saving metrics to repository: ", err)
+			}
+		case <-ctx.Done():
+			log.Println("Finished repository routine")
+			return
+		}
 	}
 }
 
-func (m *MemStorage) SetMetric(metric metrics.AtomicMetric) {
-	if metric.Type == metrics.CounterType {
+func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
+	var result metrics.Metrics
+	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
-		_, ok := m.typeToNameMapping[metric.Type][metric.Name]
-		if ok {
-			lastValue = m.typeToNameMapping[metric.Type][metric.Name].Value.(int64)
+		if m.typeToNameMapping.hasMetric(metric) {
+			lastValue = *m.typeToNameMapping[metric.MType][metric.ID].Delta
 		}
-		m.typeToNameMapping[metric.Type][metric.Name] = metrics.AtomicMetric{
-			Name:  metric.Name,
-			Type:  metrics.CounterType,
-			Value: lastValue + metric.Value.(int64),
+		value := lastValue + *metric.Delta
+		result = metrics.Metrics{
+			ID:    metric.ID,
+			MType: metrics.CounterMType,
+			Delta: &value,
 		}
+		m.typeToNameMapping.safeInsert(result)
 	} else {
-		m.typeToNameMapping[metric.Type][metric.Name] = metric
+		result = metric
+		m.typeToNameMapping.safeInsert(result)
 	}
+	return result
 }
 
-func (m *MemStorage) AddMetrics(atomicMetrics []metrics.AtomicMetric) {
+func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
 	for i := range atomicMetrics {
 		m.SetMetric(atomicMetrics[i])
 	}
 }
 
-func (m *MemStorage) GetMetric(type_, name string) (metrics.AtomicMetric, error) {
-	_, ok := m.typeToNameMapping[type_]
-	if !ok {
-		return metrics.AtomicMetric{}, fmt.Errorf("no metric type '%s'", type_)
+func (m *MemStorage) GetMetric(type_, name string) (metrics.Metrics, error) {
+	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
+		ID:    name,
+		MType: type_,
+	})
+	if metric == nil {
+		return metrics.Metrics{}, fmt.Errorf("metric %s of type %s not found", name, type_)
 	}
-	value, ok := m.typeToNameMapping[type_][name]
-	if ok {
-		return value, nil
-	} else {
-		return metrics.AtomicMetric{}, fmt.Errorf("no metric '%s'", name)
-	}
+	return *metric, nil
 }
 
-func (m *MemStorage) GetAllMetrics() []metrics.AtomicMetric {
-	var result []metrics.AtomicMetric
+func (m *MemStorage) GetAllMetrics() []metrics.Metrics {
+	var result []metrics.Metrics
 	for _, t := range m.typeToNameMapping {
 		for _, m := range t {
 			result = append(result, m)
@@ -75,33 +117,73 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 	res := make(map[string]map[string]interface{})
 	for _, t := range m.typeToNameMapping {
 		for _, m := range t {
-			_, ok := res[m.Type]
+			_, ok := res[m.MType]
 			if !ok {
-				res[m.Type] = make(map[string]interface{})
+				res[m.MType] = make(map[string]interface{})
 			}
-			res[m.Type][m.Name] = m.Value
+			if m.MType == metrics.GaugeMType {
+				res[m.MType][m.ID] = *m.Value
+			} else if m.MType == metrics.CounterMType {
+				res[m.MType][m.ID] = *m.Delta
+			}
 		}
 	}
 	return res
 }
 
 func (m *MemStorage) IncPollCount() {
-	metric, ok := m.typeToNameMapping[metrics.CounterType]["PollCount"]
 	var previousValue int64 = 0
-	if ok {
-		previousValue = metric.Value.(int64)
+
+	if currentMetric := m.typeToNameMapping.getMetric(metrics.Metrics{
+		ID:    "PollCount",
+		MType: metrics.CounterMType,
+	}); currentMetric != nil {
+		previousValue = *currentMetric.Delta
 	}
 
-	m.typeToNameMapping[metrics.CounterType]["PollCount"] = metrics.AtomicMetric{
-		Name:  "PollCount",
-		Type:  metrics.CounterType,
-		Value: previousValue + 1,
-	}
+	value := previousValue + 1
+	m.typeToNameMapping.safeInsert(metrics.Metrics{
+		ID:    "PollCount",
+		MType: metrics.CounterMType,
+		Delta: &value,
+	})
 }
 func (m *MemStorage) RandomizeRandomValue() {
-	m.typeToNameMapping[metrics.GaugeType]["RandomValue"] = metrics.AtomicMetric{
-		Name:  "RandomValue",
-		Type:  metrics.GaugeType,
-		Value: rand.Float64(),
+	value := rand.Float64()
+	m.typeToNameMapping.safeInsert(metrics.Metrics{
+		ID:    "RandomValue",
+		MType: metrics.GaugeMType,
+		Value: &value,
+	})
+}
+
+type TypeToNameToMetric map[string]map[string]metrics.Metrics
+
+func (t *TypeToNameToMetric) safeInsert(m metrics.Metrics) {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		(*t)[m.MType] = make(map[string]metrics.Metrics)
 	}
+	(*t)[m.MType][m.ID] = m
+}
+
+func (t *TypeToNameToMetric) hasMetric(m metrics.Metrics) bool {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		return false
+	}
+	_, ok = (*t)[m.MType][m.ID]
+	return ok
+}
+
+func (t *TypeToNameToMetric) getMetric(m metrics.Metrics) *metrics.Metrics {
+	_, ok := (*t)[m.MType]
+	if !ok {
+		return nil
+	}
+	metric, ok := (*t)[m.MType][m.ID]
+	if !ok {
+		return nil
+	}
+	return &metric
 }
