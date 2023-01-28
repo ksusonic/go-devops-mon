@@ -19,19 +19,19 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
-	var repository *storage.MemStorageRepository
+	var repository *storage.MemStorageRepository = nil
 	if config.StoreFile != "" {
-		repository = &storage.MemStorageRepository{
-			Repository:         nil,
-			DropInterval:       config.FileDropIntervalDuration,
-			NeedRestoreMetrics: config.RestoreFile,
-		}
-
-		repository.Repository, err = filerepository.NewFileRepository(config.StoreFile)
+		rep, err := filerepository.NewFileRepository(config.StoreFile)
 		if err != nil {
 			log.Fatalf("Error in repository: %v", err)
 		}
-		defer repository.Repository.Close()
+		defer rep.Close()
+
+		repository = &storage.MemStorageRepository{
+			Repository:         rep,
+			DropInterval:       config.FileDropIntervalDuration,
+			NeedRestoreMetrics: config.RestoreFile,
+		}
 	}
 
 	memStorage := storage.NewMemStorage(repository)
