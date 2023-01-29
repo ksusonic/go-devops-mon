@@ -29,7 +29,6 @@ func NewMemStorage(repository *MemStorageRepository) *MemStorage {
 
 	if repository != nil {
 		memStorage.repository = repository.Repository
-
 		if repository.NeedRestoreMetrics {
 			restored := memStorage.repository.ReadCurrentState()
 			if len(restored) > 0 {
@@ -66,24 +65,17 @@ func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Du
 }
 
 func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
-	var result metrics.Metrics
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
-		if m.typeToNameMapping.hasMetric(metric) {
-			lastValue = *m.typeToNameMapping[metric.MType][metric.ID].Delta
+		if found := m.typeToNameMapping.getMetric(metric); found != nil {
+			lastValue = *found.Delta
 		}
 		value := lastValue + *metric.Delta
-		result = metrics.Metrics{
-			ID:    metric.ID,
-			MType: metrics.CounterMType,
-			Delta: &value,
-		}
-		m.typeToNameMapping.safeInsert(result)
-	} else {
-		result = metric
-		m.typeToNameMapping.safeInsert(result)
+		metric.Delta = &value
 	}
-	return result
+	m.typeToNameMapping.safeInsert(metric)
+
+	return metric
 }
 
 func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
@@ -132,21 +124,21 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 }
 
 func (m *MemStorage) IncPollCount() {
-	var previousValue int64 = 0
-
-	if currentMetric := m.typeToNameMapping.getMetric(metrics.Metrics{
+	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
 		ID:    "PollCount",
 		MType: metrics.CounterMType,
-	}); currentMetric != nil {
-		previousValue = *currentMetric.Delta
-	}
-
-	value := previousValue + 1
-	m.typeToNameMapping.safeInsert(metrics.Metrics{
-		ID:    "PollCount",
-		MType: metrics.CounterMType,
-		Delta: &value,
 	})
+
+	if metric != nil {
+		*metric.Delta++
+	} else {
+		var startValue int64 = 0
+		m.typeToNameMapping.safeInsert(metrics.Metrics{
+			ID:    "PollCount",
+			MType: metrics.CounterMType,
+			Delta: &startValue,
+		})
+	}
 }
 func (m *MemStorage) RandomizeRandomValue() {
 	value := rand.Float64()
@@ -165,15 +157,6 @@ func (t *TypeToNameToMetric) safeInsert(m metrics.Metrics) {
 		(*t)[m.MType] = make(map[string]metrics.Metrics)
 	}
 	(*t)[m.MType][m.ID] = m
-}
-
-func (t *TypeToNameToMetric) hasMetric(m metrics.Metrics) bool {
-	_, ok := (*t)[m.MType]
-	if !ok {
-		return false
-	}
-	_, ok = (*t)[m.MType][m.ID]
-	return ok
 }
 
 func (t *TypeToNameToMetric) getMetric(m metrics.Metrics) *metrics.Metrics {

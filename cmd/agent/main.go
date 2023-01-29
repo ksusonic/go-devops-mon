@@ -18,6 +18,7 @@ func main() {
 		log.Fatalf("Error in metric collector: %v", err)
 	}
 
+	log.Println("Started agent!")
 	for {
 		select {
 		case <-collector.CollectChan:
