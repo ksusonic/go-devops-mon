@@ -15,6 +15,7 @@ type MetricCollector struct {
 	PushChan    <-chan time.Time
 	PushURL     string
 	Client      http.Client
+	secretKey   string
 }
 
 func NewMetricCollector(
@@ -34,12 +35,14 @@ func NewMetricCollector(
 	if err != nil {
 		return nil, err
 	}
+
 	return &MetricCollector{
 		Storage:     storage,
 		CollectChan: time.NewTicker(pollInterval).C,
 		PushChan:    time.NewTicker(reportInterval).C,
 		PushURL:     u.String(),
 		Client:      http.Client{},
+		secretKey:   cfg.SecretKey,
 	}, nil
 }
 
@@ -170,6 +173,6 @@ func (m MetricCollector) CollectStat() {
 	}
 
 	// counters
-	m.Storage.IncPollCount()
-	m.Storage.RandomizeRandomValue()
+	m.Storage.IncPollCount(m.secretKey)
+	m.Storage.RandomizeRandomValue(m.secretKey)
 }

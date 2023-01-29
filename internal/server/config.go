@@ -13,6 +13,7 @@ type Config struct {
 	FileDropIntervalDuration time.Duration `env:"-"`
 	StoreFile                string        `env:"STORE_FILE"`
 	RestoreFile              bool          `env:"RESTORE"`
+	SecretKey                string        `env:"KEY"`
 }
 
 func NewConfig() (*Config, error) {
@@ -22,6 +23,7 @@ func NewConfig() (*Config, error) {
 	flag.BoolVar(&cfg.RestoreFile, "r", true, "bool if restore from file needed")
 	flag.StringVar(&cfg.FileDropInterval, "i", "300s", "interval to save metrics to file")
 	flag.StringVar(&cfg.StoreFile, "f", "/tmp/devops-metrics-db.json", "path to file for metrics save")
+	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 	flag.Parse()
 
 	err := env.Parse(&cfg)

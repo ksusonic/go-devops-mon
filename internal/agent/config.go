@@ -11,6 +11,7 @@ type Config struct {
 	AddressScheme  string `env:"ADDRESS_SCHEME" envDefault:"http"`
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
+	SecretKey      string `env:"KEY"`
 }
 
 func NewConfig() (*Config, error) {
@@ -19,6 +20,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.Address, "a", "127.0.0.1:8080", "address of server with port if needed")
 	flag.StringVar(&cfg.ReportInterval, "r", "10s", "report interval")
 	flag.StringVar(&cfg.PollInterval, "p", "2s", "collect metrics interval")
+	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 	flag.Parse()
 
 	err := env.Parse(&cfg)

@@ -123,7 +123,7 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 	return res
 }
 
-func (m *MemStorage) IncPollCount() {
+func (m *MemStorage) IncPollCount(secretKey string) {
 	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
 		ID:    "PollCount",
 		MType: metrics.CounterMType,
@@ -131,22 +131,33 @@ func (m *MemStorage) IncPollCount() {
 
 	if metric != nil {
 		*metric.Delta++
+		if secretKey != "" {
+			metric.Hash = metric.CalcHash(secretKey)
+		}
 	} else {
 		var startValue int64 = 0
-		m.typeToNameMapping.safeInsert(metrics.Metrics{
+		res := metrics.Metrics{
 			ID:    "PollCount",
 			MType: metrics.CounterMType,
 			Delta: &startValue,
-		})
+		}
+		if secretKey != "" {
+			res.Hash = res.CalcHash(secretKey)
+		}
+		m.typeToNameMapping.safeInsert(res)
 	}
 }
-func (m *MemStorage) RandomizeRandomValue() {
+func (m *MemStorage) RandomizeRandomValue(secretKey string) {
 	value := rand.Float64()
-	m.typeToNameMapping.safeInsert(metrics.Metrics{
+	res := metrics.Metrics{
 		ID:    "RandomValue",
 		MType: metrics.GaugeMType,
 		Value: &value,
-	})
+	}
+	if secretKey != "" {
+		res.Hash = res.CalcHash(secretKey)
+	}
+	m.typeToNameMapping.safeInsert(res)
 }
 
 type TypeToNameToMetric map[string]map[string]metrics.Metrics

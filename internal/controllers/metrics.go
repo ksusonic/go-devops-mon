@@ -13,7 +13,8 @@ import (
 )
 
 type Controller struct {
-	Storage metrics.ServerMetricStorage
+	Storage   metrics.ServerMetricStorage
+	secretKey string
 }
 
 func (c *Controller) Router() *chi.Mux {
@@ -30,9 +31,10 @@ func (c *Controller) Router() *chi.Mux {
 	return router
 }
 
-func NewMetricController(storage metrics.ServerMetricStorage) *Controller {
+func NewMetricController(storage metrics.ServerMetricStorage, secretKey string) *Controller {
 	return &Controller{
-		Storage: storage,
+		Storage:   storage,
+		secretKey: secretKey,
 	}
 }
 
@@ -134,6 +136,11 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	if c.secretKey != "" && m.CalcHash(c.secretKey) != m.Hash {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

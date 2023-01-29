@@ -38,7 +38,7 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
-	metricController := controllers.NewMetricController(memStorage)
+	metricController := controllers.NewMetricController(memStorage, config.SecretKey)
 	router.Mount("/", metricController.Router())
 
 	log.Printf("Server started on %s\n", config.Address)

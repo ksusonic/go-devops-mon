@@ -35,7 +35,7 @@ type AgentMetricStorage interface {
 	GetAllMetrics() []Metrics
 
 	// IncPollCount Increases field PollCount by 1
-	IncPollCount()
+	IncPollCount(secretKey string)
 	// RandomizeRandomValue Set RandomValue to random number
-	RandomizeRandomValue()
+	RandomizeRandomValue(secretKey string)
 }
