@@ -78,6 +78,7 @@ func (m *MemStorage) SetMetric(metric metrics.Metrics, secretKey *string) metric
 			log.Printf("Error calculating hash: %s\n", hash)
 			return metrics.Metrics{}
 		}
+		fmt.Printf("Calculated hash %s for %s\n", hash, metric.ID)
 		metric.Hash = hash
 	}
 	m.typeToNameMapping.safeInsert(metric)

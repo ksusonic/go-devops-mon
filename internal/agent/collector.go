@@ -175,12 +175,12 @@ func (m MetricCollector) CollectStat() {
 		},
 	}
 
-	for _, currentMetric := range currentGaugeMetrics {
+	for i := range currentGaugeMetrics {
 		m.Storage.SetMetric(
 			metrics.Metrics{
-				ID:    currentMetric.Name,
+				ID:    currentGaugeMetrics[i].Name,
 				MType: metrics.GaugeMType,
-				Value: &currentMetric.Value,
+				Value: &currentGaugeMetrics[i].Value,
 			},
 			m.secretKey,
 		)

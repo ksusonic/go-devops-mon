@@ -1,8 +1,10 @@
 package metrics
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -39,12 +41,13 @@ func (m Metrics) CalcHash(key string) (string, error) {
 	default:
 		return "", fmt.Errorf("cannot calc hash of type %s", m.MType)
 	}
-	h := sha256.New()
-	_, err := h.Write([]byte(hash + key))
+	log.Printf("used %s + %s for hash\n", hash, key)
+	h := hmac.New(sha256.New, []byte(key))
+	_, err := h.Write([]byte(hash))
 	if err != nil {
 		return "", fmt.Errorf("cannot calc hash: %v", err)
 	}
-	return string(h.Sum(nil)), nil
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func (m Metrics) ValidateHash(key string) error {
