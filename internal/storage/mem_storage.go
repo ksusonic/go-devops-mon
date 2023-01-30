@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -64,7 +63,7 @@ func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Du
 	}
 }
 
-func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
+func (m *MemStorage) SetMetric(metric metrics.Metrics, secretKey *string) metrics.Metrics {
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
 		if found := m.typeToNameMapping.getMetric(metric); found != nil {
@@ -73,15 +72,17 @@ func (m *MemStorage) SetMetric(metric metrics.Metrics) metrics.Metrics {
 		value := lastValue + *metric.Delta
 		metric.Delta = &value
 	}
+	if secretKey != nil {
+		hash, err := metric.CalcHash(*secretKey)
+		if err != nil {
+			log.Printf("Error calculating hash: %s\n", hash)
+			return metrics.Metrics{}
+		}
+		metric.Hash = hash
+	}
 	m.typeToNameMapping.safeInsert(metric)
 
 	return metric
-}
-
-func (m *MemStorage) AddMetrics(atomicMetrics []metrics.Metrics) {
-	for i := range atomicMetrics {
-		m.SetMetric(atomicMetrics[i])
-	}
 }
 
 func (m *MemStorage) GetMetric(type_, name string) (metrics.Metrics, error) {
@@ -121,43 +122,6 @@ func (m *MemStorage) GetMappedByTypeAndNameMetrics() map[string]map[string]inter
 		}
 	}
 	return res
-}
-
-func (m *MemStorage) IncPollCount(secretKey string) {
-	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
-		ID:    "PollCount",
-		MType: metrics.CounterMType,
-	})
-
-	if metric != nil {
-		*metric.Delta++
-		if secretKey != "" {
-			metric.Hash = metric.CalcHash(secretKey)
-		}
-	} else {
-		var startValue int64 = 0
-		res := metrics.Metrics{
-			ID:    "PollCount",
-			MType: metrics.CounterMType,
-			Delta: &startValue,
-		}
-		if secretKey != "" {
-			res.Hash = res.CalcHash(secretKey)
-		}
-		m.typeToNameMapping.safeInsert(res)
-	}
-}
-func (m *MemStorage) RandomizeRandomValue(secretKey string) {
-	value := rand.Float64()
-	res := metrics.Metrics{
-		ID:    "RandomValue",
-		MType: metrics.GaugeMType,
-		Value: &value,
-	}
-	if secretKey != "" {
-		res.Hash = res.CalcHash(secretKey)
-	}
-	m.typeToNameMapping.safeInsert(res)
 }
 
 type TypeToNameToMetric map[string]map[string]metrics.Metrics

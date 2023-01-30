@@ -14,7 +14,7 @@ import (
 
 type Controller struct {
 	Storage   metrics.ServerMetricStorage
-	secretKey string
+	secretKey *string
 }
 
 func (c *Controller) Router() *chi.Mux {
@@ -31,7 +31,11 @@ func (c *Controller) Router() *chi.Mux {
 	return router
 }
 
-func NewMetricController(storage metrics.ServerMetricStorage, secretKey string) *Controller {
+func NewMetricController(storage metrics.ServerMetricStorage, key string) *Controller {
+	var secretKey *string
+	if key != "" {
+		secretKey = &key
+	}
 	return &Controller{
 		Storage:   storage,
 		secretKey: secretKey,
@@ -111,7 +115,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			ID:    reqName,
 			MType: reqType,
 			Value: &value,
-		})
+		}, c.secretKey)
 		log.Printf("Updated gauge %s: %f\n", reqName, value)
 	} else if reqType == metrics.CounterMType {
 		value, err := strconv.ParseInt(reqRawValue, 10, 64)
@@ -123,7 +127,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			ID:    reqName,
 			MType: reqType,
 			Delta: &value,
-		})
+		}, c.secretKey)
 		log.Printf("Updated counter %s: %d\n", reqName, value)
 	} else {
 		log.Println("unexpected metric type!")
@@ -139,16 +143,24 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if c.secretKey != "" && m.CalcHash(c.secretKey) != m.Hash {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if c.secretKey != nil {
+		hash, err := m.CalcHash(*c.secretKey)
+		if err != nil {
+			log.Printf("Error calculating hash: %s\n", hash)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if hash != m.Hash {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
 		w.WriteHeader(http.StatusNotImplemented)
 		log.Printf("Unknown metric type %s\n", m.MType)
 	} else {
-		resultMetric := c.Storage.SetMetric(*m)
+		resultMetric := c.Storage.SetMetric(*m, c.secretKey)
 		log.Printf("Updated %s\n", m)
 
 		marshal, err := json.Marshal(resultMetric)

@@ -14,7 +14,7 @@ type Repository interface {
 
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(Metrics) Metrics
+	SetMetric(m Metrics, secretKey *string) Metrics
 
 	// GetMetric Get metric or error
 	GetMetric(type_, name string) (Metrics, error)
@@ -28,14 +28,7 @@ type ServerMetricStorage interface {
 
 type AgentMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(Metrics) Metrics
-	AddMetrics([]Metrics)
-
+	SetMetric(m Metrics, secretKey *string) Metrics
 	// GetAllMetrics Get all metrics as slice
 	GetAllMetrics() []Metrics
-
-	// IncPollCount Increases field PollCount by 1
-	IncPollCount(secretKey string)
-	// RandomizeRandomValue Set RandomValue to random number
-	RandomizeRandomValue(secretKey string)
 }

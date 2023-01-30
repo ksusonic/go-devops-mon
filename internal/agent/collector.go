@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -9,13 +10,15 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
+var pollCounterDelta int64 = 1
+
 type MetricCollector struct {
 	Storage     metrics.AgentMetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
 	PushURL     string
 	Client      http.Client
-	secretKey   string
+	secretKey   *string
 }
 
 func NewMetricCollector(
@@ -36,13 +39,18 @@ func NewMetricCollector(
 		return nil, err
 	}
 
+	var secretKey *string
+	if cfg.SecretKey != "" {
+		secretKey = &cfg.SecretKey
+	}
+
 	return &MetricCollector{
 		Storage:     storage,
 		CollectChan: time.NewTicker(pollInterval).C,
 		PushChan:    time.NewTicker(reportInterval).C,
 		PushURL:     u.String(),
 		Client:      http.Client{},
-		secretKey:   cfg.SecretKey,
+		secretKey:   secretKey,
 	}, nil
 }
 
@@ -161,18 +169,30 @@ func (m MetricCollector) CollectStat() {
 			Name:  "TotalAlloc",
 			Value: float64(rtm.TotalAlloc),
 		},
+		{
+			Name:  "RandomValue",
+			Value: rand.Float64(),
+		},
 	}
 
-	for _, metric := range currentGaugeMetrics {
-		m.Storage.SetMetric(metrics.Metrics{
-			ID:    metric.Name,
-			MType: metrics.GaugeMType,
-			Delta: nil,
-			Value: &metric.Value,
-		})
+	for _, currentMetric := range currentGaugeMetrics {
+		m.Storage.SetMetric(
+			metrics.Metrics{
+				ID:    currentMetric.Name,
+				MType: metrics.GaugeMType,
+				Value: &currentMetric.Value,
+			},
+			m.secretKey,
+		)
 	}
 
 	// counters
-	m.Storage.IncPollCount(m.secretKey)
-	m.Storage.RandomizeRandomValue(m.secretKey)
+	m.Storage.SetMetric(
+		metrics.Metrics{
+			ID:    "PollCount",
+			MType: metrics.CounterMType,
+			Delta: &pollCounterDelta,
+		},
+		m.secretKey,
+	)
 }

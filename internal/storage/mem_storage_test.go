@@ -29,7 +29,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 				ID:    "PollCount",
 				MType: metrics.CounterMType,
 				Delta: &number,
-			})
+			}, nil)
 			value, err := tt.memStorage.GetMetric(metrics.CounterMType, "PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
@@ -63,7 +63,7 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 			_, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
 			require.Error(t, err)
 
-			tt.memStorage.SetMetric(tt.args)
+			tt.memStorage.SetMetric(tt.args, nil)
 			result, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
 			require.NoError(t, err)
 			require.NotNil(t, result)

@@ -23,16 +23,16 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 
 	response, err := m.Client.Do(r)
 	if err != nil {
-		return fmt.Errorf("error sending push metric request: %v", err)
+		return fmt.Errorf("error sending push metric %s request: %v", metric.ID, err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		readBody, err := io.ReadAll(response.Body)
 		if err != nil {
-			return fmt.Errorf("status %s while sending metric", response.Status)
+			return fmt.Errorf("status %s while sending metric %s", response.Status, metric.ID)
 		}
-		log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
+		log.Printf("status %s while sending metric %s on \"update\" path : %s\n", response.Status, metric.ID, string(readBody))
 	}
 	return nil
 }

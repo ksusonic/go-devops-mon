@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"net/http"
 )
@@ -22,41 +21,40 @@ type Metrics struct {
 
 func (m Metrics) Bind(*http.Request) error {
 	if m.ID == "" {
-		return errors.New("missing ID of metric")
+		return fmt.Errorf("missing ID of metric")
 	} else if m.MType == "" {
-		return errors.New("missing type of metric")
+		return fmt.Errorf("missing type of metric")
 	}
 
 	return nil
 }
 
-func (m Metrics) CalcHash(key string) string {
+func (m Metrics) CalcHash(key string) (string, error) {
 	var hash string
-	fmt.Println("metric - ", m.ID, m.Delta, m.Value)
 	switch m.MType {
 	case CounterMType:
-		if m.Delta == nil {
-			return ""
-		}
 		hash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
 	case GaugeMType:
 		hash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
 	default:
-		return ""
+		return "", fmt.Errorf("cannot calc hash of type %s", m.MType)
 	}
 	h := sha256.New()
-	h.Write([]byte(hash))
-	h.Write([]byte(key))
-	return string(h.Sum(nil))
+	_, err := h.Write([]byte(hash + key))
+	if err != nil {
+		return "", fmt.Errorf("cannot calc hash: %v", err)
+	}
+	return string(h.Sum(nil)), nil
 }
 
 func (m Metrics) ValidateHash(key string) error {
-	if m.Hash == "" {
-		return nil
+	calculated, err := m.CalcHash(key)
+	if err != nil {
+		return fmt.Errorf("cannot calc hash: %v", err)
 	}
 
-	if m.CalcHash(key) != m.Hash {
-		return errors.New("hash is not correct")
+	if calculated != m.Hash {
+		return fmt.Errorf("hash does not match: actual: %s expected: %s", calculated, m.Hash)
 	}
 	return nil
 }
@@ -64,9 +62,9 @@ func (m Metrics) ValidateHash(key string) error {
 func (m Metrics) String() string {
 	switch m.MType {
 	case CounterMType:
-		return fmt.Sprintf("metric %s of type %s with value %d", m.ID, m.MType, *m.Delta)
+		return fmt.Sprintf("metric %s of type %s with value %d and hash %s", m.ID, m.MType, *m.Delta, m.Hash)
 	case GaugeMType:
-		return fmt.Sprintf("metric %s of type %s with value %f", m.ID, m.MType, *m.Value)
+		return fmt.Sprintf("metric %s of type %s with value %f and hash %s", m.ID, m.MType, *m.Value, m.Hash)
 	default:
 		return ""
 	}
