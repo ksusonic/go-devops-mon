@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,6 +16,20 @@ import (
 type Controller struct {
 	Storage   metrics.ServerMetricStorage
 	secretKey *string
+	DB        *sql.DB
+}
+
+func NewMetricController(storage metrics.ServerMetricStorage, key string, db *sql.DB) *Controller {
+	var secretKey *string
+	if key != "" {
+		secretKey = &key
+	}
+
+	return &Controller{
+		Storage:   storage,
+		secretKey: secretKey,
+		DB:        db,
+	}
 }
 
 func (c *Controller) Router() *chi.Mux {
@@ -28,18 +43,9 @@ func (c *Controller) Router() *chi.Mux {
 	router.Post("/update/", c.updateMetricHandler)
 	router.Post("/value/", c.getMetricHandler)
 
-	return router
-}
+	router.Get("/ping", c.pingHandler)
 
-func NewMetricController(storage metrics.ServerMetricStorage, key string) *Controller {
-	var secretKey *string
-	if key != "" {
-		secretKey = &key
-	}
-	return &Controller{
-		Storage:   storage,
-		secretKey: secretKey,
-	}
+	return router
 }
 
 func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request) {

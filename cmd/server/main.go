@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -36,9 +38,19 @@ func main() {
 
 	memStorage := storage.NewMemStorage(repository)
 
+	var db *sql.DB
+	if config.DatabaseURL != "" {
+		db, err = sql.Open("pgx", config.DatabaseURL)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("Successfully connected to db")
+		defer db.Close()
+	}
+
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
-	metricController := controllers.NewMetricController(memStorage, config.SecretKey)
+	metricController := controllers.NewMetricController(memStorage, config.SecretKey, db)
 	router.Mount("/", metricController.Router())
 
 	log.Printf("Server started on %s\n", config.Address)
