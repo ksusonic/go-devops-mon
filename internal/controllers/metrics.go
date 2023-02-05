@@ -73,6 +73,9 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// bug in tests: usage of not-hashed metrics in increment 9 after 8th
+	c.HashService.SetHash(&value)
+
 	marshal, err := json.Marshal(value)
 	if err != nil {
 		log.Println(err)
