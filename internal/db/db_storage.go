@@ -44,6 +44,10 @@ func NewDB(connectString string) (*DB, error) {
 	}, nil
 }
 
+func (d DB) Ping(ctx context.Context) error {
+	return d.db.PingContext(ctx)
+}
+
 func (d DB) Close() error {
 	return d.db.Close()
 }
