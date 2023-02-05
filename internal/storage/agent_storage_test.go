@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"testing"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -38,7 +39,7 @@ func TestAgentStorage_SetMetric_GetAllMetrics(t *testing.T) {
 	t.Run(t.Name(), func(t *testing.T) {
 		agentStorage := NewAgentStorage()
 		for _, m := range allMetrics {
-			agentStorage.SetMetric(m)
+			agentStorage.SetMetric(m, hash.NewService(""))
 		}
 
 		actual := agentStorage.GetAllMetrics()
