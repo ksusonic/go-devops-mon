@@ -13,7 +13,7 @@ func (c *Controller) pingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
-	if err := c.DB.PingContext(ctx); err != nil {
+	if err := c.Storage.Ping(ctx); err != nil {
 		log.Println("DB ping error", err)
 		render.Render(w, r, ErrInternalError(err))
 		return

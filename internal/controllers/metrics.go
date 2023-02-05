@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,21 +13,14 @@ import (
 )
 
 type Controller struct {
-	Storage   metrics.ServerMetricStorage
-	secretKey *string
-	DB        *sql.DB
+	Storage     metrics.ServerMetricStorage
+	HashService metrics.HashService
 }
 
-func NewMetricController(storage metrics.ServerMetricStorage, key string, db *sql.DB) *Controller {
-	var secretKey *string
-	if key != "" {
-		secretKey = &key
-	}
-
+func NewMetricController(storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
 	return &Controller{
-		Storage:   storage,
-		secretKey: secretKey,
-		DB:        db,
+		Storage:     storage,
+		HashService: hashService,
 	}
 }
 
@@ -51,7 +43,7 @@ func (c *Controller) Router() *chi.Mux {
 func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
-	value, err := c.Storage.GetMetric(reqType, reqName)
+	value, err := c.Storage.GetMetric(r.Context(), reqType, reqName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -71,11 +63,11 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrBadRequest(err))
 		return
 	}
 
-	value, err := c.Storage.GetMetric(m.MType, m.ID)
+	value, err := c.Storage.GetMetric(r.Context(), m.MType, m.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -93,8 +85,13 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, _ *http.Request) {
-	marshall, err := json.Marshal(c.Storage.GetMappedByTypeAndNameMetrics())
+func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	metricsMapping, err := c.Storage.GetMappedByTypeAndNameMetrics(r.Context())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	marshall, err := json.Marshal(metricsMapping)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,14 +111,23 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 	if reqType == metrics.GaugeMType {
 		value, err := strconv.ParseFloat(reqRawValue, 64)
 		if err != nil {
-			log.Printf("Incorrect value: %s\n", reqRawValue)
-			w.WriteHeader(http.StatusBadRequest)
+			render.Render(w, r, ErrBadRequest(err))
+			return
 		}
-		c.Storage.SetMetric(metrics.Metrics{
+		m := metrics.Metrics{
 			ID:    reqName,
 			MType: reqType,
 			Value: &value,
-		}, c.secretKey)
+		}
+		if err = c.HashService.SetHash(&m); err != nil {
+			render.Render(w, r, ErrInternalError(err))
+			return
+		}
+
+		if _, err = c.Storage.SetMetric(r.Context(), m, c.HashService); err != nil {
+			render.Render(w, r, ErrInternalError(err))
+			return
+		}
 		log.Printf("Updated gauge %s: %f\n", reqName, value)
 	} else if reqType == metrics.CounterMType {
 		value, err := strconv.ParseInt(reqRawValue, 10, 64)
@@ -129,11 +135,20 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			log.Printf("Incorrect value: %s\n", reqRawValue)
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		c.Storage.SetMetric(metrics.Metrics{
+		m := metrics.Metrics{
 			ID:    reqName,
 			MType: reqType,
 			Delta: &value,
-		}, c.secretKey)
+		}
+		if err = c.HashService.SetHash(&m); err != nil {
+			render.Render(w, r, ErrInternalError(err))
+			return
+		}
+
+		if _, err = c.Storage.SetMetric(r.Context(), m, c.HashService); err != nil {
+			render.Render(w, r, ErrInternalError(err))
+			return
+		}
 		log.Printf("Updated counter %s: %d\n", reqName, value)
 	} else {
 		log.Println("unexpected metric type!")
@@ -145,28 +160,24 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
+		render.Render(w, r, ErrBadRequest(err))
 		return
 	}
 
-	if c.secretKey != nil {
-		hash, err := m.CalcHash(*c.secretKey)
-		if err != nil {
-			log.Printf("Error calculating hash: %s\n", hash)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if hash != m.Hash {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	if err := c.HashService.ValidateHash(m); err != nil {
+		render.Render(w, r, ErrBadRequest(err))
+		return
 	}
 
 	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
 		w.WriteHeader(http.StatusNotImplemented)
 		log.Printf("Unknown metric type %s\n", m.MType)
 	} else {
-		resultMetric := c.Storage.SetMetric(*m, c.secretKey)
+		resultMetric, err := c.Storage.SetMetric(r.Context(), *m, c.HashService)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		log.Printf("Updated %s\n", m)
 
 		marshal, err := json.Marshal(resultMetric)

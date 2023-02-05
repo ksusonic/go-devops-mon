@@ -7,6 +7,7 @@ import (
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
 	"github.com/ksusonic/go-devops-mon/internal/filerepository"
+	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
@@ -50,7 +51,8 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
-	metricController := controllers.NewMetricController(memStorage, config.SecretKey, db)
+	hashService := hash.NewService(config.SecretKey)
+	metricController := controllers.NewMetricController(memStorage, hashService)
 	router.Mount("/", metricController.Router())
 
 	log.Printf("Server started on %s\n", config.Address)

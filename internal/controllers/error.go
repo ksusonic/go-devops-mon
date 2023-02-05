@@ -19,18 +19,18 @@ func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func ErrInvalidRequest(err error) render.Renderer {
+func ErrBadRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
+		HTTPStatusCode: http.StatusBadRequest,
+		StatusText:     "Bad request.",
 	}
 }
 
 func ErrInternalError(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: 500,
+		HTTPStatusCode: http.StatusInternalServerError,
 		StatusText:     "Internal error.",
 	}
 }
