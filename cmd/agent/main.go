@@ -9,6 +9,8 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
 	cfg, err := agent.NewConfig()
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)

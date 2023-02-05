@@ -15,7 +15,7 @@ type MemStorage struct {
 }
 
 func (m *MemStorage) Ping(context.Context) error {
-	return nil
+	return fmt.Errorf("in-memory storage does not supports ping")
 }
 
 func (m *MemStorage) Close() error {
