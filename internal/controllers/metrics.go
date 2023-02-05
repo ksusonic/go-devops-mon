@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,12 +16,14 @@ import (
 type Controller struct {
 	Storage     metrics.ServerMetricStorage
 	HashService metrics.HashService
+	db          *sql.DB
 }
 
-func NewMetricController(storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
+func NewMetricController(storage metrics.ServerMetricStorage, hashService metrics.HashService, db *sql.DB) *Controller {
 	return &Controller{
 		Storage:     storage,
 		HashService: hashService,
+		db:          db,
 	}
 }
 

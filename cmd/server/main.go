@@ -52,7 +52,7 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
 	hashService := hash.NewService(config.SecretKey)
-	metricController := controllers.NewMetricController(memStorage, hashService)
+	metricController := controllers.NewMetricController(memStorage, hashService, db)
 	router.Mount("/", metricController.Router())
 
 	log.Printf("Server started on %s\n", config.Address)
