@@ -70,6 +70,11 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	value, err := c.Storage.GetMetric(r.Context(), m.MType, m.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		marshal, err := json.Marshal(makeSimpleMetric(*m, c.HashService))
+		_, err = w.Write(marshal)
+		if err != nil {
+			log.Println(err)
+		}
 		return
 	}
 
@@ -191,4 +196,16 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 			log.Println(err)
 		}
 	}
+}
+
+func makeSimpleMetric(m metrics.Metrics, h metrics.HashService) metrics.Metrics {
+	if m.MType == metrics.CounterMType {
+		var val int64 = 0
+		m.Delta = &val
+	} else {
+		var val float64 = 0
+		m.Value = &val
+	}
+	h.SetHash(&m)
+	return m
 }
