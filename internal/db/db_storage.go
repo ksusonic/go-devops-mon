@@ -48,18 +48,43 @@ func (d DB) Close() error {
 	return d.db.Close()
 }
 
-func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics, err error) {
+func (d DB) SetMetric(ctx context.Context, m metrics.Metrics, h metrics.HashService) (_ metrics.Metrics, err error) {
 	switch m.MType {
 	case metrics.CounterMType:
-		_, err = d.db.ExecContext(ctx,
-			`INSERT INTO metrics
+		current, err := d.GetMetric(ctx, m.MType, m.ID)
+		if err != nil {
+			_, err = d.db.ExecContext(ctx,
+				`INSERT INTO metrics
 			(id, type, delta, hash)
 			VALUES ($1, $2, $3, $4)
-			ON CONFLICT(id, type) DO UPDATE SET delta=EXCLUDED.delta+$3, hash=$4`,
-			m.ID,
-			m.MType,
-			*m.Delta,
-			m.Hash)
+			ON CONFLICT(id, type) DO UPDATE SET delta=$3, hash=$4`,
+				m.ID,
+				m.MType,
+				*m.Delta,
+				m.Hash,
+			)
+			if err != nil {
+				return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
+			}
+		} else {
+			*m.Delta += *current.Delta
+			if err = h.SetHash(&m); err != nil {
+				return metrics.Metrics{}, err
+			}
+			_, err = d.db.ExecContext(ctx,
+				`INSERT INTO metrics
+			(id, type, delta, hash)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT(id, type) DO UPDATE SET delta=$3, hash=$4`,
+				m.ID,
+				m.MType,
+				*m.Delta,
+				m.Hash,
+			)
+			if err != nil {
+				return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
+			}
+		}
 	case metrics.GaugeMType:
 		_, err = d.db.ExecContext(
 			ctx,
@@ -70,7 +95,8 @@ func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics
 			m.ID,
 			m.MType,
 			*m.Value,
-			m.Hash)
+			m.Hash,
+		)
 	default:
 		return metrics.Metrics{}, fmt.Errorf("unknown metric type for db-insertion: %s", m.MType)
 	}
