@@ -1,10 +1,7 @@
 package metrics
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -28,37 +25,6 @@ func (m Metrics) Bind(*http.Request) error {
 		return fmt.Errorf("missing type of metric")
 	}
 
-	return nil
-}
-
-func (m Metrics) CalcHash(key string) (string, error) {
-	var hash string
-	switch m.MType {
-	case CounterMType:
-		hash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
-	case GaugeMType:
-		hash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
-	default:
-		return "", fmt.Errorf("cannot calc hash of type %s", m.MType)
-	}
-	log.Printf("used %s + %s for hash\n", hash, key)
-	h := hmac.New(sha256.New, []byte(key))
-	_, err := h.Write([]byte(hash))
-	if err != nil {
-		return "", fmt.Errorf("cannot calc hash: %v", err)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
-}
-
-func (m Metrics) ValidateHash(key string) error {
-	calculated, err := m.CalcHash(key)
-	if err != nil {
-		return fmt.Errorf("cannot calc hash: %v", err)
-	}
-
-	if calculated != m.Hash {
-		return fmt.Errorf("hash does not match: actual: %s expected: %s", calculated, m.Hash)
-	}
 	return nil
 }
 

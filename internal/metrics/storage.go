@@ -1,9 +1,11 @@
 package metrics
 
-import (
-	"context"
-	"time"
-)
+import "context"
+
+type HashService interface {
+	SetHash(m *Metrics) error
+	ValidateHash(m *Metrics) error
+}
 
 type Repository interface {
 	SaveMetrics([]Metrics) error
@@ -14,21 +16,22 @@ type Repository interface {
 
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(m Metrics, secretKey *string) Metrics
+	SetMetric(ctx context.Context, m Metrics, h HashService) (Metrics, error)
 
 	// GetMetric Get metric or error
-	GetMetric(type_, name string) (Metrics, error)
+	GetMetric(ctx context.Context, type_, name string) (Metrics, error)
 	// GetAllMetrics Get all metrics as slice
-	GetAllMetrics() []Metrics
+	GetAllMetrics(ctx context.Context) ([]Metrics, error)
 	// GetMappedByTypeAndNameMetrics Get mapping of type -> name -> value
-	GetMappedByTypeAndNameMetrics() map[string]map[string]interface{}
+	GetMappedByTypeAndNameMetrics(ctx context.Context) (map[string]map[string]interface{}, error)
 
-	RepositoryDropRoutine(context.Context, time.Duration)
+	Close() error
+	Ping(ctx context.Context) error
 }
 
 type AgentMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(m Metrics, secretKey *string) Metrics
+	SetMetric(m Metrics, h HashService) error
 	// GetAllMetrics Get all metrics as slice
 	GetAllMetrics() []Metrics
 }

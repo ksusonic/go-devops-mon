@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +12,7 @@ import (
 )
 
 func TestMemStorage_IncPollCount(t *testing.T) {
+	ctx := context.Background()
 	tests := []struct {
 		name       string
 		memStorage *MemStorage
@@ -21,16 +24,16 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(metrics.CounterMType, "PollCount")
+			_, err := tt.memStorage.GetMetric(ctx, metrics.CounterMType, "PollCount")
 			require.Error(t, err)
 
 			var number int64 = 1
-			tt.memStorage.SetMetric(metrics.Metrics{
+			tt.memStorage.SetMetric(ctx, metrics.Metrics{
 				ID:    "PollCount",
 				MType: metrics.CounterMType,
 				Delta: &number,
-			}, nil)
-			value, err := tt.memStorage.GetMetric(metrics.CounterMType, "PollCount")
+			}, hash.NewService(""))
+			value, err := tt.memStorage.GetMetric(ctx, metrics.CounterMType, "PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
 			var expected int64 = 1
@@ -41,6 +44,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 }
 
 func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
+	ctx := context.Background()
 	var value = 7.0023
 
 	tests := []struct {
@@ -60,11 +64,11 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
+			_, err := tt.memStorage.GetMetric(ctx, tt.args.MType, tt.args.ID)
 			require.Error(t, err)
 
-			tt.memStorage.SetMetric(tt.args, nil)
-			result, err := tt.memStorage.GetMetric(tt.args.MType, tt.args.ID)
+			tt.memStorage.SetMetric(ctx, tt.args, hash.NewService(""))
+			result, err := tt.memStorage.GetMetric(ctx, tt.args.MType, tt.args.ID)
 			require.NoError(t, err)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.args, result)

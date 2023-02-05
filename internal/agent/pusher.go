@@ -11,15 +11,16 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-const contentType = "application/json"
-
 func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 	marshall, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("error marshalling metric: %v", err)
 	}
-	r, _ := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
-	r.Header.Add("Content-Type", contentType)
+	r, err := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+	r.Header.Add("Content-Type", "application/json")
 
 	response, err := m.Client.Do(r)
 	if err != nil {

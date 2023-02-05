@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/ksusonic/go-devops-mon/internal/agent"
+	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
@@ -12,8 +13,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
 	}
-	memStorage := storage.NewMemStorage(nil)
-	collector, err := agent.NewMetricCollector(cfg, memStorage)
+	memStorage := storage.NewAgentStorage()
+	hashService := hash.NewService(cfg.SecretKey)
+
+	collector, err := agent.NewMetricCollector(cfg, memStorage, hashService)
 	if err != nil {
 		log.Fatalf("Error in metric collector: %v", err)
 	}

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -18,12 +19,13 @@ type MetricCollector struct {
 	PushChan    <-chan time.Time
 	PushURL     string
 	Client      http.Client
-	secretKey   *string
+	HashService metrics.HashService
 }
 
 func NewMetricCollector(
 	cfg *Config,
 	storage metrics.AgentMetricStorage,
+	service metrics.HashService,
 ) (*MetricCollector, error) {
 	u := url.URL{
 		Scheme: cfg.AddressScheme,
@@ -39,18 +41,13 @@ func NewMetricCollector(
 		return nil, err
 	}
 
-	var secretKey *string
-	if cfg.SecretKey != "" {
-		secretKey = &cfg.SecretKey
-	}
-
 	return &MetricCollector{
 		Storage:     storage,
 		CollectChan: time.NewTicker(pollInterval).C,
 		PushChan:    time.NewTicker(reportInterval).C,
 		PushURL:     u.String(),
 		Client:      http.Client{},
-		secretKey:   secretKey,
+		HashService: service,
 	}, nil
 }
 
@@ -175,24 +172,35 @@ func (m MetricCollector) CollectStat() {
 		},
 	}
 
+	// gauge
 	for i := range currentGaugeMetrics {
-		m.Storage.SetMetric(
+		err := m.Storage.SetMetric(
 			metrics.Metrics{
 				ID:    currentGaugeMetrics[i].Name,
 				MType: metrics.GaugeMType,
 				Value: &currentGaugeMetrics[i].Value,
 			},
-			m.secretKey,
+			m.HashService,
 		)
+		if err != nil {
+			log.Println("Could not set hash:", err)
+		}
 	}
 
 	// counters
-	m.Storage.SetMetric(
+	m.incPollCount()
+}
+
+func (m MetricCollector) incPollCount() {
+	err := m.Storage.SetMetric(
 		metrics.Metrics{
 			ID:    "PollCount",
 			MType: metrics.CounterMType,
 			Delta: &pollCounterDelta,
 		},
-		m.secretKey,
+		m.HashService,
 	)
+	if err != nil {
+		log.Println("Could not set hash:", err)
+	}
 }

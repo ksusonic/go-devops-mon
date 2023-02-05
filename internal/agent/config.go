@@ -21,6 +21,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.ReportInterval, "r", "10s", "report interval")
 	flag.StringVar(&cfg.PollInterval, "p", "2s", "collect metrics interval")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
+
 	flag.Parse()
 
 	err := env.Parse(&cfg)
