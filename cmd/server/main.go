@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
@@ -14,14 +13,15 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	logger, _ := zap.NewDevelopment()
 
 	config, err := server.NewConfig()
 	if err != nil {
-		log.Fatalf("Error reading config: %v", err)
+		logger.Fatal("error reading config", zap.Error(err))
 	}
 
 	router := chi.NewRouter()
@@ -30,19 +30,19 @@ func main() {
 	var metricsStorage metrics.ServerMetricStorage
 
 	if config.DatabaseURL != "" {
-		log.Println("Using DB-storage")
+		logger.Info("using DB-storage")
 		metricsStorage, err = db.NewDB(config.DatabaseURL)
 		if err != nil {
-			log.Fatalf("Error in database: %v", err)
+			logger.Fatal("Error in database: %v", zap.Error(err))
 		}
-		log.Println("Initted db")
+		logger.Debug("successfully initialized db")
 	} else {
-		log.Println("Using in-memory storage")
+		logger.Info("using in-memory storage")
 		var repository metrics.Repository
 		if config.StoreFile != "" {
 			repository, err = filerepository.NewFileRepository(config.StoreFile)
 			if err != nil {
-				log.Fatalf("Error in repository: %v", err)
+				logger.Fatal("Error in repository: %v", zap.Error(err))
 			}
 		}
 
@@ -57,12 +57,12 @@ func main() {
 	defer metricsStorage.Close()
 
 	hashService := hash.NewService(config.SecretKey)
-	metricController := controllers.NewMetricController(metricsStorage, hashService)
+	metricController := controllers.NewMetricController(logger, metricsStorage, hashService)
 	router.Mount("/", metricController.Router())
 
-	log.Printf("Server started on %s\n", config.Address)
+	logger.Info("Server started!", zap.String("address", config.Address))
 	err = http.ListenAndServe(config.Address, router)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("shutdown", zap.Error(err))
 	}
 }

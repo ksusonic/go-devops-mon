@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -9,21 +8,25 @@ import (
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
+	"go.uber.org/zap"
 )
 
 var pollCounterDelta int64 = 1
 
 type MetricCollector struct {
+	Logger      *zap.Logger
 	Storage     metrics.AgentMetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
-	PushURL     string
-	Client      http.Client
+	pushURL     string
+	client      http.Client
 	HashService metrics.HashService
 }
 
 func NewMetricCollector(
 	cfg *Config,
+	logger *zap.Logger,
 	storage metrics.AgentMetricStorage,
 	service metrics.HashService,
 ) (*MetricCollector, error) {
@@ -42,11 +45,12 @@ func NewMetricCollector(
 	}
 
 	return &MetricCollector{
+		Logger:      logger,
 		Storage:     storage,
 		CollectChan: time.NewTicker(pollInterval).C,
 		PushChan:    time.NewTicker(reportInterval).C,
-		PushURL:     u.String(),
-		Client:      http.Client{},
+		pushURL:     u.String(),
+		client:      http.Client{},
 		HashService: service,
 	}, nil
 }
@@ -180,7 +184,7 @@ func (m MetricCollector) CollectStat() {
 			Value: &currentGaugeMetrics[i].Value,
 		})
 		if err != nil {
-			log.Println("Could not set hash:", err)
+			m.Logger.Error("Could not set hash", zap.String("id", currentGaugeMetrics[i].Name), zap.Error(err))
 		}
 	}
 
@@ -191,6 +195,6 @@ func (m MetricCollector) CollectStat() {
 		Delta: &pollCounterDelta,
 	})
 	if err != nil {
-		log.Println("Could not set hash:", err)
+		m.Logger.Error("could not set hash", zap.String("id", "PollCount"), zap.Error(err))
 	}
 }

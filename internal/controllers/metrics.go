@@ -2,23 +2,28 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
+	"go.uber.org/zap"
 )
 
 type Controller struct {
+	Logger      *zap.Logger
 	Storage     metrics.ServerMetricStorage
 	HashService metrics.HashService
 }
 
-func NewMetricController(storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
+func NewMetricController(logger *zap.Logger, storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
 	return &Controller{
+		Logger:      logger,
 		Storage:     storage,
 		HashService: hashService,
 	}
@@ -57,7 +62,7 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 	}
 	_, err = w.Write([]byte(stringValue))
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("error writing response", zap.Error(err))
 	}
 }
 
@@ -78,13 +83,13 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 	marshal, err := json.Marshal(value)
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("error unmarshalling", zap.Error(err))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(marshal)
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("error writing response", zap.Error(err))
 	}
 }
 
@@ -101,7 +106,7 @@ func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Add("Content-Type", "text/html")
 	_, err = w.Write(marshall)
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("error writing response", zap.Error(err))
 	}
 }
 
@@ -152,7 +157,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			render.Render(w, r, ErrInternalError(err))
 			return
 		}
-		log.Printf("Updated counter %s: %d\n", reqName, value)
+		c.Logger.Info("Updated counter", zap.String("id", reqName), zap.Int64("delta", value))
 	} else {
 		log.Println("unexpected metric type!")
 		w.WriteHeader(http.StatusNotImplemented)

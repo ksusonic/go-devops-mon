@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 func (m MetricCollector) PushMetrics() error {
@@ -14,12 +15,12 @@ func (m MetricCollector) PushMetrics() error {
 	for i := range allMetrics {
 		err := m.HashService.SetHash(&allMetrics[i])
 		if err != nil {
-			log.Println("Could not set hash!")
+			m.Logger.Error("could not set hash", zap.String("id", allMetrics[i].ID), zap.Error(err))
 		}
 	}
 
 	if len(allMetrics) == 0 {
-		log.Println("Currently no metrics. Push skipped")
+		m.Logger.Debug("currently no metrics. push skipped")
 		return nil
 	}
 
@@ -27,13 +28,13 @@ func (m MetricCollector) PushMetrics() error {
 	if err != nil {
 		return fmt.Errorf("error marshalling metric: %v", err)
 	}
-	r, err := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
+	r, err := http.NewRequest(http.MethodPost, m.pushURL, bytes.NewReader(marshall))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
 	}
 	r.Header.Add("Content-Type", "application/json")
 
-	response, err := m.Client.Do(r)
+	response, err := m.client.Do(r)
 	if err != nil {
 		return fmt.Errorf("error sending push metrics request: %v", err)
 	}
@@ -44,7 +45,7 @@ func (m MetricCollector) PushMetrics() error {
 		if err != nil {
 			return fmt.Errorf("status %s while sending metrics: %v", response.Status, err)
 		}
-		log.Printf("status %s while sending metrics on \"updates\" path : %s\n", response.Status, string(readBody))
+		return fmt.Errorf("status %s while sending metrics on \"updates\" path: %s", response.Status, string(readBody))
 	}
 
 	return nil
