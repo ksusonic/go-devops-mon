@@ -11,6 +11,13 @@ import (
 
 func (m MetricCollector) PushMetrics() error {
 	allMetrics := m.Storage.GetAllMetrics()
+	for i := range allMetrics {
+		err := m.HashService.SetHash(&allMetrics[i])
+		if err != nil {
+			log.Println("Could not set hash!")
+		}
+	}
+
 	if len(allMetrics) == 0 {
 		log.Println("Currently no metrics. Push skipped")
 		return nil
