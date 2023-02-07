@@ -3,7 +3,6 @@ package filerepository
 import (
 	"bufio"
 	"encoding/json"
-	"log"
 	"os"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -39,8 +38,6 @@ func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
 }
 
 func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
-	log.Printf("Saving %d metrics\n", len(metrics))
-
 	// clear old metrics
 	err := p.file.Truncate(0)
 	if err != nil {

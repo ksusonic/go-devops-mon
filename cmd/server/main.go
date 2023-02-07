@@ -47,6 +47,7 @@ func main() {
 		}
 
 		metricsStorage = storage.NewMemStorage(
+			logger.Named("MemStorage"),
 			&storage.MemStorageRepository{
 				Repository:         repository,
 				DropInterval:       config.FileDropIntervalDuration,
@@ -57,7 +58,11 @@ func main() {
 	defer metricsStorage.Close()
 
 	hashService := hash.NewService(config.SecretKey)
-	metricController := controllers.NewMetricController(logger, metricsStorage, hashService)
+	metricController := controllers.NewMetricController(
+		logger.Named("MetricController"),
+		metricsStorage,
+		hashService,
+	)
 	router.Mount("/", metricController.Router())
 
 	logger.Info("Server started!", zap.String("address", config.Address))

@@ -3,19 +3,20 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type MemStorage struct {
+	Logger            *zap.Logger
 	typeToNameMapping TypeToNameToMetric
 	repository        metrics.Repository
 }
 
 func (m *MemStorage) Ping(context.Context) error {
-	return fmt.Errorf("in-memory storage does not supports ping")
+	return fmt.Errorf("in-memory storage does not support ping")
 }
 
 func (m *MemStorage) Close() error {
@@ -32,8 +33,9 @@ type MemStorageRepository struct {
 	NeedRestoreMetrics bool
 }
 
-func NewMemStorage(repository *MemStorageRepository) *MemStorage {
+func NewMemStorage(logger *zap.Logger, repository *MemStorageRepository) *MemStorage {
 	memStorage := MemStorage{
+		Logger:            logger,
 		typeToNameMapping: make(TypeToNameToMetric),
 		repository:        nil,
 	}
@@ -46,9 +48,9 @@ func NewMemStorage(repository *MemStorageRepository) *MemStorage {
 				for _, m := range restored {
 					memStorage.typeToNameMapping.safeInsert(m)
 				}
-				log.Printf("Restored %d metrics\n", len(restored))
+				logger.Info("Restored metrics", zap.Int("amount", len(restored)))
 			} else {
-				log.Println("No metrics to restore")
+				logger.Info("No metrics to restore")
 			}
 		}
 
@@ -59,22 +61,24 @@ func NewMemStorage(repository *MemStorageRepository) *MemStorage {
 }
 
 func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Duration) {
-	log.Printf("Started repository drop routine to %s with interval %s\n", m.repository.Info(), duration)
+	logger := m.Logger.Named("RepositoryDropRoutine")
+	logger.Info("Started repository drop routine ", zap.String("destination", m.repository.Info()), zap.Duration("drop-duration", duration))
 	ticker := time.NewTicker(duration)
 	for {
 		select {
 		case <-ticker.C:
 			allMetrics, err := m.GetAllMetrics(ctx)
 			if err != nil {
-				log.Println("Error while getting all metrics: ", err)
-				return
+				logger.Error("Error while getting all metrics: ", zap.Error(err))
+				continue
 			}
 			if err = m.repository.SaveMetrics(allMetrics); err != nil {
-				log.Println("Error while saving metrics to repository: ", err)
-				return
+				logger.Error("Error while saving metrics to repository: ", zap.Error(err))
+			} else {
+				logger.Debug("Saved metrics to repository")
 			}
 		case <-ctx.Done():
-			log.Println("Finished repository routine")
+			logger.Info("Finished repository routine")
 			return
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
@@ -127,7 +126,7 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 			}
 			_, err = counterStmt.ExecContext(ctx, metric.ID, *metric.Delta)
 		default:
-			log.Printf("Unknown metric: %s type %s\n", metric.ID, metric.MType)
+			err = fmt.Errorf("unknown metric type: %s", metric.MType)
 		}
 		if err != nil {
 			if err = tx.Rollback(); err != nil {

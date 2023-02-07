@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -11,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-
 	"go.uber.org/zap"
 )
 
@@ -69,7 +67,7 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
-		render.Render(w, r, ErrBadRequest(err))
+		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
 	}
 
@@ -96,12 +94,12 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMapping, err := c.Storage.GetMappedByTypeAndNameMetrics(r.Context())
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("could not GetMappedByTypeAndNameMetrics", zap.Error(err))
 		return
 	}
 	marshall, err := json.Marshal(metricsMapping)
 	if err != nil {
-		log.Fatal(err)
+		c.Logger.Fatal("error while marshalling mappedByTypeAndNameMetrics", zap.Error(err))
 	}
 	w.Header().Add("Content-Type", "text/html")
 	_, err = w.Write(marshall)
@@ -119,7 +117,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 	if reqType == metrics.GaugeMType {
 		value, err := strconv.ParseFloat(reqRawValue, 64)
 		if err != nil {
-			render.Render(w, r, ErrBadRequest(err))
+			render.Render(w, r, ErrBadRequest(err, c.Logger))
 			return
 		}
 		m := metrics.Metrics{
@@ -128,19 +126,19 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			Value: &value,
 		}
 		if err = c.HashService.SetHash(&m); err != nil {
-			render.Render(w, r, ErrInternalError(err))
+			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
 
 		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
-			render.Render(w, r, ErrInternalError(err))
+			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
-		log.Printf("Updated gauge %s: %f\n", reqName, value)
+		c.Logger.Info("Updated gauge", zap.String("id", reqName), zap.Float64("value", value))
 	} else if reqType == metrics.CounterMType {
 		value, err := strconv.ParseInt(reqRawValue, 10, 64)
 		if err != nil {
-			log.Printf("Incorrect value: %s\n", reqRawValue)
+			c.Logger.Error("incorrect value", zap.String("value", reqRawValue))
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		m := metrics.Metrics{
@@ -149,17 +147,17 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			Delta: &value,
 		}
 		if err = c.HashService.SetHash(&m); err != nil {
-			render.Render(w, r, ErrInternalError(err))
+			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
 
 		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
-			render.Render(w, r, ErrInternalError(err))
+			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
 		c.Logger.Info("Updated counter", zap.String("id", reqName), zap.Int64("delta", value))
 	} else {
-		log.Println("unexpected metric type!")
+		c.Logger.Error("unexpected metric type", zap.String("type", reqType))
 		w.WriteHeader(http.StatusNotImplemented)
 	}
 }
@@ -168,35 +166,35 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
-		render.Render(w, r, ErrBadRequest(err))
+		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
 	}
 
 	if err := c.HashService.ValidateHash(m); err != nil {
-		render.Render(w, r, ErrBadRequest(err))
+		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
 	}
 
 	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
 		w.WriteHeader(http.StatusNotImplemented)
-		log.Printf("Unknown metric type %s\n", m.MType)
+		c.Logger.Error("unexpected metric type", zap.String("type", m.MType))
 	} else {
 		resultMetric, err := c.Storage.SetMetric(r.Context(), *m)
 		if err != nil {
-			log.Println(err)
+			c.Logger.Error("error while setting metric", zap.Error(err))
 			return
 		}
-		log.Printf("Updated %s\n", m)
+		c.Logger.Debug("Updated", zap.String("metric", m.String()))
 
 		marshal, err := json.Marshal(resultMetric)
 		if err != nil {
-			log.Println(err)
+			c.Logger.Fatal("error while marshalling in updateMetricHandler", zap.Error(err))
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(marshal)
 		if err != nil {
-			log.Println(err)
+			c.Logger.Error("error writing response", zap.Error(err))
 		}
 	}
 }
@@ -205,26 +203,26 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 func (c *Controller) updatesMetricHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("could not read request body", zap.Error(err))
 		return
 	}
 	var metricSlice []metrics.Metrics
 	err = json.Unmarshal(body, &metricSlice)
 	if err != nil {
-		log.Println(err)
+		c.Logger.Error("error unmarshalling metric slice", zap.Error(err))
 		return
 	}
 
 	for _, m := range metricSlice {
 		if err := c.HashService.ValidateHash(&m); err != nil {
-			render.Render(w, r, ErrBadRequest(err))
+			render.Render(w, r, ErrBadRequest(err, c.Logger))
 			return
 		}
 	}
 
 	err = c.Storage.SetMetrics(r.Context(), &metricSlice)
 	if err != nil {
-		log.Printf("Error in updatesMetricHandler: %s\n", err)
-		render.Render(w, r, ErrInternalError(err))
+		c.Logger.Error("error setting metric", zap.Error(err))
+		render.Render(w, r, ErrInternalError(err, c.Logger))
 	}
 }

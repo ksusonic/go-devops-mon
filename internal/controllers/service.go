@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/render"
+	"go.uber.org/zap"
 )
 
 func (c *Controller) pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -14,8 +14,8 @@ func (c *Controller) pingHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := c.Storage.Ping(ctx); err != nil {
-		log.Println("DB ping error:", err)
-		render.Render(w, r, ErrInternalError(err))
+		c.Logger.Error("DB ping error", zap.Error(err))
+		render.Render(w, r, ErrInternalError(err, c.Logger))
 		return
 	}
 }

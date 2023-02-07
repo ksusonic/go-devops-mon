@@ -8,7 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
+
+var logger, _ = zap.NewDevelopment()
 
 func TestMemStorage_IncPollCount(t *testing.T) {
 	ctx := context.Background()
@@ -18,7 +21,7 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}{
 		{
 			name:       "add to empty test",
-			memStorage: NewMemStorage(nil),
+			memStorage: NewMemStorage(logger, nil),
 		},
 	}
 	for _, tt := range tests {
@@ -53,7 +56,7 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	}{
 		{
 			name:       "simple test #1",
-			memStorage: NewMemStorage(nil),
+			memStorage: NewMemStorage(logger, nil),
 			args: metrics.Metrics{
 				ID:    "PauseTotalNs",
 				MType: metrics.GaugeMType,
