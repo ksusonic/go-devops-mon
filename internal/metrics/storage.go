@@ -16,7 +16,7 @@ type Repository interface {
 
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(ctx context.Context, m Metrics, h HashService) (Metrics, error)
+	SetMetric(ctx context.Context, m Metrics) (Metrics, error)
 
 	// GetMetric Get metric or error
 	GetMetric(ctx context.Context, type_, name string) (Metrics, error)
@@ -31,7 +31,7 @@ type ServerMetricStorage interface {
 
 type AgentMetricStorage interface {
 	// SetMetric Set value to metric
-	SetMetric(m Metrics, h HashService) error
+	SetMetric(m Metrics) error
 	// GetAllMetrics Get all metrics as slice
 	GetAllMetrics() []Metrics
 }

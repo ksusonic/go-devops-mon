@@ -14,7 +14,7 @@ func NewAgentStorage() *AgentStorage {
 	}
 }
 
-func (m *AgentStorage) SetMetric(metric metrics.Metrics, h metrics.HashService) error {
+func (m *AgentStorage) SetMetric(metric metrics.Metrics) error {
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
 		if found := m.typeToNameMapping.getMetric(metric); found != nil {
@@ -24,10 +24,6 @@ func (m *AgentStorage) SetMetric(metric metrics.Metrics, h metrics.HashService) 
 		metric.Delta = &value
 	}
 
-	err := h.SetHash(&metric)
-	if err != nil {
-		return err
-	}
 	m.typeToNameMapping.safeInsert(metric)
 
 	return nil

@@ -31,7 +31,6 @@ func NewDB(connectString string) (*DB, error) {
 			type  VARCHAR NOT NULL,
 			value DOUBLE PRECISION,
 			delta BIGINT,
-			hash  varchar,
 			UNIQUE (id, type)
 		);
 	`)
@@ -52,54 +51,35 @@ func (d DB) Close() error {
 	return d.db.Close()
 }
 
-func (d DB) SetMetric(ctx context.Context, m metrics.Metrics, h metrics.HashService) (_ metrics.Metrics, err error) {
+func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics, err error) {
 	switch m.MType {
 	case metrics.CounterMType:
 		current, err := d.GetMetric(ctx, m.MType, m.ID)
-		if err != nil {
-			_, err = d.db.ExecContext(ctx,
-				`INSERT INTO metrics
-			(id, type, delta, hash)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT(id, type) DO UPDATE SET delta=$3, hash=$4`,
-				m.ID,
-				m.MType,
-				*m.Delta,
-				m.Hash,
-			)
-			if err != nil {
-				return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
-			}
-		} else {
+		if err == nil {
 			*m.Delta += *current.Delta
-			if err = h.SetHash(&m); err != nil {
-				return metrics.Metrics{}, err
-			}
-			_, err = d.db.ExecContext(ctx,
-				`INSERT INTO metrics
-			(id, type, delta, hash)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT(id, type) DO UPDATE SET delta=$3, hash=$4`,
-				m.ID,
-				m.MType,
-				*m.Delta,
-				m.Hash,
-			)
-			if err != nil {
-				return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
-			}
+		}
+		_, err = d.db.ExecContext(ctx,
+			`INSERT INTO metrics
+			(id, type, delta)
+			VALUES ($1, $2, $3)
+			ON CONFLICT(id, type) DO UPDATE SET delta=$3`,
+			m.ID,
+			m.MType,
+			*m.Delta,
+		)
+		if err != nil {
+			return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
 		}
 	case metrics.GaugeMType:
 		_, err = d.db.ExecContext(
 			ctx,
 			`INSERT INTO metrics
-			(id, type, value, hash)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT(id, type) DO UPDATE SET value=$3, hash=$4`,
+			(id, type, value)
+			VALUES ($1, $2, $3)
+			ON CONFLICT(id, type) DO UPDATE SET value=$3`,
 			m.ID,
 			m.MType,
 			*m.Value,
-			m.Hash,
 		)
 	default:
 		return metrics.Metrics{}, fmt.Errorf("unknown metric type for db-insertion: %s", m.MType)
@@ -119,13 +99,13 @@ func (d DB) SetMetric(ctx context.Context, m metrics.Metrics, h metrics.HashServ
 func (d DB) GetMetric(ctx context.Context, type_, name string) (res metrics.Metrics, err error) {
 	row := d.db.QueryRowContext(
 		ctx,
-		"SELECT id, type, value, delta, hash FROM metrics WHERE type = $1 AND id = $2;",
+		"SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2;",
 		type_,
 		name,
 	)
 	var gaugeValue sql.NullFloat64
 	var counterValue sql.NullInt64
-	err = row.Scan(&res.ID, &res.MType, &gaugeValue, &counterValue, &res.Hash)
+	err = row.Scan(&res.ID, &res.MType, &gaugeValue, &counterValue)
 	if err != nil {
 		return metrics.Metrics{}, fmt.Errorf("error in GetMetric: %v", err)
 	}
@@ -141,7 +121,7 @@ func (d DB) GetMetric(ctx context.Context, type_, name string) (res metrics.Metr
 }
 
 func (d DB) GetAllMetrics(ctx context.Context) (res []metrics.Metrics, err error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, type, value, delta, hash FROM metrics;")
+	rows, err := d.db.QueryContext(ctx, "SELECT id, type, value, delta FROM metrics;")
 	if err != nil {
 		return nil, fmt.Errorf("error in GetAllMetrics: %v", err)
 	}
@@ -150,7 +130,7 @@ func (d DB) GetAllMetrics(ctx context.Context) (res []metrics.Metrics, err error
 		var m metrics.Metrics
 		var gaugeValue sql.NullFloat64
 		var counterValue sql.NullInt64
-		err = rows.Scan(&m.ID, &m.MType, &gaugeValue, &counterValue, &m.Hash)
+		err = rows.Scan(&m.ID, &m.MType, &gaugeValue, &counterValue)
 		if err != nil {
 			return nil, fmt.Errorf("error in GetAllMetrics: %v", err)
 		}

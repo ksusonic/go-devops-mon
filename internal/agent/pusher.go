@@ -12,6 +12,7 @@ import (
 )
 
 func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
+	m.HashService.SetHash(&metric)
 	marshall, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("error marshalling metric: %v", err)

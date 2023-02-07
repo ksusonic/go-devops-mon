@@ -80,7 +80,7 @@ func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Du
 	}
 }
 
-func (m *MemStorage) SetMetric(_ context.Context, metric metrics.Metrics, h metrics.HashService) (metrics.Metrics, error) {
+func (m *MemStorage) SetMetric(_ context.Context, metric metrics.Metrics) (metrics.Metrics, error) {
 	if metric.MType == metrics.CounterMType {
 		var lastValue int64 = 0
 		if found := m.typeToNameMapping.getMetric(metric); found != nil {
@@ -88,10 +88,6 @@ func (m *MemStorage) SetMetric(_ context.Context, metric metrics.Metrics, h metr
 		}
 		value := lastValue + *metric.Delta
 		metric.Delta = &value
-		err := h.SetHash(&metric)
-		if err != nil {
-			return metrics.Metrics{}, err
-		}
 	}
 
 	m.typeToNameMapping.safeInsert(metric)

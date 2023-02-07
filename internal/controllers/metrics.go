@@ -73,7 +73,6 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// bug in tests: usage of not-hashed metrics in increment 9 after 8th
 	c.HashService.SetHash(&value)
 
 	marshal, err := json.Marshal(value)
@@ -127,7 +126,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if _, err = c.Storage.SetMetric(r.Context(), m, c.HashService); err != nil {
+		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
 			render.Render(w, r, ErrInternalError(err))
 			return
 		}
@@ -148,7 +147,7 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if _, err = c.Storage.SetMetric(r.Context(), m, c.HashService); err != nil {
+		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
 			render.Render(w, r, ErrInternalError(err))
 			return
 		}
@@ -176,7 +175,7 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusNotImplemented)
 		log.Printf("Unknown metric type %s\n", m.MType)
 	} else {
-		resultMetric, err := c.Storage.SetMetric(r.Context(), *m, c.HashService)
+		resultMetric, err := c.Storage.SetMetric(r.Context(), *m)
 		if err != nil {
 			log.Println(err)
 			return

@@ -174,32 +174,22 @@ func (m MetricCollector) CollectStat() {
 
 	// gauge
 	for i := range currentGaugeMetrics {
-		err := m.Storage.SetMetric(
-			metrics.Metrics{
-				ID:    currentGaugeMetrics[i].Name,
-				MType: metrics.GaugeMType,
-				Value: &currentGaugeMetrics[i].Value,
-			},
-			m.HashService,
-		)
+		err := m.Storage.SetMetric(metrics.Metrics{
+			ID:    currentGaugeMetrics[i].Name,
+			MType: metrics.GaugeMType,
+			Value: &currentGaugeMetrics[i].Value,
+		})
 		if err != nil {
 			log.Println("Could not set hash:", err)
 		}
 	}
 
 	// counters
-	m.incPollCount()
-}
-
-func (m MetricCollector) incPollCount() {
-	err := m.Storage.SetMetric(
-		metrics.Metrics{
-			ID:    "PollCount",
-			MType: metrics.CounterMType,
-			Delta: &pollCounterDelta,
-		},
-		m.HashService,
-	)
+	err := m.Storage.SetMetric(metrics.Metrics{
+		ID:    "PollCount",
+		MType: metrics.CounterMType,
+		Delta: &pollCounterDelta,
+	})
 	if err != nil {
 		log.Println("Could not set hash:", err)
 	}
