@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
@@ -96,18 +97,73 @@ func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics
 	return metric, nil
 }
 
-func (d DB) GetMetric(ctx context.Context, type_, name string) (res metrics.Metrics, err error) {
+func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	gaugeStmt, err := tx.Prepare(`INSERT INTO metrics (id, type, value) VALUES($1, 'gauge', $2) ON CONFLICT(id, type) DO UPDATE SET value=$2;`)
+	if err != nil {
+		return err
+	}
+	counterStmt, err := tx.Prepare(`INSERT INTO metrics (id, type, delta) VALUES($1, 'counter', $2) ON CONFLICT(id, type) DO UPDATE SET delta=$2;`)
+	if err != nil {
+		return err
+	}
+	defer gaugeStmt.Close()
+	defer counterStmt.Close()
+
+	for _, metric := range *m {
+		switch metric.MType {
+		case metrics.GaugeMType:
+			_, err = gaugeStmt.ExecContext(ctx, metric.ID, *metric.Value)
+		case metrics.CounterMType:
+			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2;", metric.MType, metric.ID)
+			currentMetric, err2 := rowToMetric(metricRow)
+			if err2 == nil {
+				// plus current delta
+				*metric.Delta += *currentMetric.Delta
+			}
+			_, err = counterStmt.ExecContext(ctx, metric.ID, *metric.Delta)
+		default:
+			log.Printf("Unknown metric: %s type %s\n", metric.ID, metric.MType)
+		}
+		if err != nil {
+			if err = tx.Rollback(); err != nil {
+				return fmt.Errorf("SetMetrics: unable to rollback: %v", err)
+			}
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("SetMetrics: unable to commit: %v", err)
+	}
+
+	return nil
+}
+
+func (d DB) GetMetric(ctx context.Context, type_, name string) (metrics.Metrics, error) {
 	row := d.db.QueryRowContext(
 		ctx,
 		"SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2;",
 		type_,
 		name,
 	)
+	return rowToMetric(row)
+}
+
+func rowToMetric(row *sql.Row) (metrics.Metrics, error) {
+	res := metrics.Metrics{}
 	var gaugeValue sql.NullFloat64
 	var counterValue sql.NullInt64
-	err = row.Scan(&res.ID, &res.MType, &gaugeValue, &counterValue)
+	if err := row.Err(); err != nil {
+		return metrics.Metrics{}, err
+	}
+	err := row.Scan(&res.ID, &res.MType, &gaugeValue, &counterValue)
 	if err != nil {
-		return metrics.Metrics{}, fmt.Errorf("error in GetMetric: %v", err)
+		return metrics.Metrics{}, fmt.Errorf("error in rowToMetric: %v", err)
 	}
 
 	if gaugeValue.Valid {

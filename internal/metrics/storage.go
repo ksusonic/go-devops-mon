@@ -17,6 +17,7 @@ type Repository interface {
 type ServerMetricStorage interface {
 	// SetMetric Set value to metric
 	SetMetric(ctx context.Context, m Metrics) (Metrics, error)
+	SetMetrics(ctx context.Context, m *[]Metrics) error
 
 	// GetMetric Get metric or error
 	GetMetric(ctx context.Context, type_, name string) (Metrics, error)

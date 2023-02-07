@@ -30,7 +30,7 @@ func NewMetricCollector(
 	u := url.URL{
 		Scheme: cfg.AddressScheme,
 		Host:   cfg.Address,
-		Path:   "/update/",
+		Path:   "/updates/",
 	}
 	pollInterval, err := time.ParseDuration(cfg.PollInterval)
 	if err != nil {

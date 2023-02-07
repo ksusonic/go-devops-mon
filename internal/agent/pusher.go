@@ -7,13 +7,16 @@ import (
 	"io"
 	"log"
 	"net/http"
-
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
-	m.HashService.SetHash(&metric)
-	marshall, err := json.Marshal(metric)
+func (m MetricCollector) PushMetrics() error {
+	allMetrics := m.Storage.GetAllMetrics()
+	if len(allMetrics) == 0 {
+		log.Println("Currently no metrics. Push skipped")
+		return nil
+	}
+
+	marshall, err := json.Marshal(allMetrics)
 	if err != nil {
 		return fmt.Errorf("error marshalling metric: %v", err)
 	}
@@ -25,31 +28,17 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 
 	response, err := m.Client.Do(r)
 	if err != nil {
-		return fmt.Errorf("error sending push metric %s request: %v", metric.ID, err)
+		return fmt.Errorf("error sending push metrics request: %v", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		readBody, err := io.ReadAll(response.Body)
 		if err != nil {
-			return fmt.Errorf("status %s while sending metric %s", response.Status, metric.ID)
+			return fmt.Errorf("status %s while sending metrics: %v", response.Status, err)
 		}
-		log.Printf("status %s while sending metric %s on \"update\" path : %s\n", response.Status, metric.ID, string(readBody))
-	}
-	return nil
-}
-
-func (m MetricCollector) PushMetrics() error {
-	var accumulatedErrs string
-	for _, metric := range m.Storage.GetAllMetrics() {
-		err := m.sendMetric(metric)
-		if err != nil {
-			accumulatedErrs += err.Error() + "\n"
-		}
+		log.Printf("status %s while sending metrics on \"updates\" path : %s\n", response.Status, string(readBody))
 	}
 
-	if accumulatedErrs != "" {
-		return fmt.Errorf(accumulatedErrs)
-	}
 	return nil
 }

@@ -95,6 +95,16 @@ func (m *MemStorage) SetMetric(_ context.Context, metric metrics.Metrics) (metri
 	return metric, nil
 }
 
+func (m *MemStorage) SetMetrics(ctx context.Context, metrics *[]metrics.Metrics) error {
+	for _, metric := range *metrics {
+		_, err := m.SetMetric(ctx, metric)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *MemStorage) GetMetric(_ context.Context, type_, name string) (metrics.Metrics, error) {
 	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
 		ID:    name,

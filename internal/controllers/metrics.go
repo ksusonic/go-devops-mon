@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
-
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -33,6 +33,7 @@ func (c *Controller) Router() *chi.Mux {
 	router.Post("/update/{type}/{name}/{value}", c.updateMetricPathHandler)
 
 	router.Post("/update/", c.updateMetricHandler)
+	router.Post("/updates/", c.updatesMetricHandler)
 	router.Post("/value/", c.getMetricHandler)
 
 	router.Get("/ping", c.pingHandler)
@@ -192,5 +193,33 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			log.Println(err)
 		}
+	}
+}
+
+// updatesMetricHandler — updates metric by []Metrics data in body
+func (c *Controller) updatesMetricHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	var metricSlice []metrics.Metrics
+	err = json.Unmarshal(body, &metricSlice)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, m := range metricSlice {
+		if err := c.HashService.ValidateHash(&m); err != nil {
+			render.Render(w, r, ErrBadRequest(err))
+			return
+		}
+	}
+
+	err = c.Storage.SetMetrics(r.Context(), &metricSlice)
+	if err != nil {
+		log.Printf("Error in updatesMetricHandler: %s\n", err)
+		render.Render(w, r, ErrInternalError(err))
 	}
 }
