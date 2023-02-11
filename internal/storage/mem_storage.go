@@ -3,14 +3,11 @@ package storage
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
-	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type MemStorage struct {
-	Logger            *zap.Logger
 	typeToNameMapping TypeToNameToMetric
 	repository        metrics.Repository
 }
@@ -27,60 +24,9 @@ func (m *MemStorage) Close() error {
 	return nil
 }
 
-type MemStorageRepository struct {
-	Repository         metrics.Repository
-	DropInterval       time.Duration
-	NeedRestoreMetrics bool
-}
-
-func NewMemStorage(logger *zap.Logger, repository *MemStorageRepository) *MemStorage {
-	memStorage := MemStorage{
-		Logger:            logger,
+func NewMemStorage() *MemStorage {
+	return &MemStorage{
 		typeToNameMapping: make(TypeToNameToMetric),
-		repository:        nil,
-	}
-
-	if repository != nil {
-		memStorage.repository = repository.Repository
-		if repository.NeedRestoreMetrics {
-			restored := memStorage.repository.ReadCurrentState()
-			if len(restored) > 0 {
-				for _, m := range restored {
-					memStorage.typeToNameMapping.safeInsert(m)
-				}
-				logger.Info("Restored metrics", zap.Int("amount", len(restored)))
-			} else {
-				logger.Info("No metrics to restore")
-			}
-		}
-
-		go memStorage.RepositoryDropRoutine(context.Background(), repository.DropInterval)
-	}
-
-	return &memStorage
-}
-
-func (m *MemStorage) RepositoryDropRoutine(ctx context.Context, duration time.Duration) {
-	logger := m.Logger.Named("RepositoryDropRoutine")
-	logger.Info("Started repository drop routine ", zap.String("destination", m.repository.Info()), zap.Duration("drop-duration", duration))
-	ticker := time.NewTicker(duration)
-	for {
-		select {
-		case <-ticker.C:
-			allMetrics, err := m.GetAllMetrics(ctx)
-			if err != nil {
-				logger.Error("Error while getting all metrics: ", zap.Error(err))
-				continue
-			}
-			if err = m.repository.SaveMetrics(allMetrics); err != nil {
-				logger.Error("Error while saving metrics to repository: ", zap.Error(err))
-			} else {
-				logger.Debug("Saved metrics to repository")
-			}
-		case <-ctx.Done():
-			logger.Info("Finished repository routine")
-			return
-		}
 	}
 }
 

@@ -4,13 +4,9 @@ import (
 	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
-	"github.com/ksusonic/go-devops-mon/internal/db"
-	"github.com/ksusonic/go-devops-mon/internal/filerepository"
 	"github.com/ksusonic/go-devops-mon/internal/hash"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
-	"github.com/ksusonic/go-devops-mon/internal/storage"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -27,33 +23,9 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
 
-	var metricsStorage metrics.ServerMetricStorage
-
-	if config.DatabaseURL != "" {
-		logger.Info("using DB-storage")
-		metricsStorage, err = db.NewDB(config.DatabaseURL)
-		if err != nil {
-			logger.Fatal("Error in database: %v", zap.Error(err))
-		}
-		logger.Debug("successfully initialized db")
-	} else {
-		logger.Info("using in-memory storage")
-		var repository metrics.Repository
-		if config.StoreFile != "" {
-			repository, err = filerepository.NewFileRepository(config.StoreFile)
-			if err != nil {
-				logger.Fatal("Error in repository: %v", zap.Error(err))
-			}
-		}
-
-		metricsStorage = storage.NewMemStorage(
-			logger.Named("MemStorage"),
-			&storage.MemStorageRepository{
-				Repository:         repository,
-				DropInterval:       config.FileDropIntervalDuration,
-				NeedRestoreMetrics: config.RestoreFile,
-			},
-		)
+	metricsStorage, err := server.NewStorage(config, logger)
+	if err != nil {
+		logger.Fatal("error creating storage", zap.Error(err))
 	}
 	defer metricsStorage.Close()
 

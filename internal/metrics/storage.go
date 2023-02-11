@@ -1,6 +1,9 @@
 package metrics
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type HashService interface {
 	SetHash(m *Metrics) error
@@ -12,6 +15,7 @@ type Repository interface {
 	ReadCurrentState() []Metrics
 	Info() string
 	Close() error
+	DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]Metrics, error), duration time.Duration)
 }
 
 type ServerMetricStorage interface {
