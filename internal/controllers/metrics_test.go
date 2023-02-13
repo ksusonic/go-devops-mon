@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -14,7 +15,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
+
+var logger, _ = zap.NewDevelopment()
+
+type hashService struct {
+}
+
+func (h hashService) SetHash(*metrics.Metrics) error {
+	return nil
+}
+func (h hashService) ValidateHash(*metrics.Metrics) error {
+	return nil
+}
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (int, []byte) {
 	req, err := http.NewRequest(method, ts.URL+path, body)
@@ -36,9 +50,9 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 }
 
 func TestController_updateMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewMetricController(memStorage)
+	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
 	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -60,9 +74,9 @@ func TestController_updateMetricPathHandler(t *testing.T) {
 }
 
 func TestController_updateMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewMetricController(memStorage)
+	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
 	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -110,7 +124,7 @@ func TestController_updateMetricHandler(t *testing.T) {
 
 		if tt.ExpectedStatus == http.StatusOK {
 			// check how metric saved in storage
-			actualMetric, err := memStorage.GetMetric(tt.Metric.MType, tt.Metric.ID)
+			actualMetric, err := memStorage.GetMetric(context.Background(), tt.Metric.MType, tt.Metric.ID)
 			if err != nil {
 				t.Errorf("metric %s not saved in storage", tt.Metric.ID)
 			}
@@ -137,9 +151,9 @@ func TestController_updateMetricHandler(t *testing.T) {
 }
 
 func TestController_getMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewMetricController(memStorage)
+	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
 	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -153,9 +167,9 @@ func TestController_getMetricPathHandler(t *testing.T) {
 }
 
 func TestController_getMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewMetricController(memStorage)
+	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
 	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -192,9 +206,9 @@ func TestController_getMetricHandler(t *testing.T) {
 }
 
 func TestController_getAllMetricsHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage(nil)
+	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
 	router := chi.NewRouter()
-	r := NewMetricController(memStorage)
+	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
 	router.Mount("/", r.Router())
 	ts := httptest.NewServer(router)
 	defer ts.Close()

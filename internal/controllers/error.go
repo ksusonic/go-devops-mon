@@ -1,28 +1,44 @@
 package controllers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/go-chi/render"
+	"go.uber.org/zap"
 )
 
 type ErrResponse struct {
-	Err            error  `json:"-"`
-	HTTPStatusCode int    `json:"-"`
-	StatusText     string `json:"status"`
+	Logger         *zap.Logger `json:"-"`
+	Err            error       `json:"-"`
+	HTTPStatusCode int         `json:"-"`
+	StatusText     string      `json:"status"`
 }
 
 func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
-	log.Printf("error %d path \"%s\": %v\n", e.HTTPStatusCode, r.URL, e.Err)
+	e.Logger.Error("rendering err reponse",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.Int("status", e.HTTPStatusCode),
+		zap.Error(e.Err),
+	)
 	return nil
 }
 
-func ErrInvalidRequest(err error) render.Renderer {
+func ErrBadRequest(err error, logger *zap.Logger) render.Renderer {
 	return &ErrResponse{
+		Logger:         logger,
 		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
+		HTTPStatusCode: http.StatusBadRequest,
+		StatusText:     "Bad request.",
+	}
+}
+
+func ErrInternalError(err error, logger *zap.Logger) render.Renderer {
+	return &ErrResponse{
+		Logger:         logger,
+		Err:            err,
+		HTTPStatusCode: http.StatusInternalServerError,
+		StatusText:     "Internal error.",
 	}
 }

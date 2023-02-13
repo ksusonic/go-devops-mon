@@ -5,49 +5,48 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"go.uber.org/zap"
 )
 
-const contentType = "application/json"
+func (m MetricCollector) PushMetrics() error {
+	allMetrics := m.Storage.GetAllMetrics()
+	for i := range allMetrics {
+		err := m.HashService.SetHash(&allMetrics[i])
+		if err != nil {
+			m.Logger.Error("could not set hash", zap.String("id", allMetrics[i].ID), zap.Error(err))
+		}
+	}
 
-func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
-	marshall, err := json.Marshal(metric)
+	if len(allMetrics) == 0 {
+		m.Logger.Debug("currently no metrics. push skipped")
+		return nil
+	}
+
+	marshall, err := json.Marshal(allMetrics)
 	if err != nil {
 		return fmt.Errorf("error marshalling metric: %v", err)
 	}
-	r, _ := http.NewRequest(http.MethodPost, m.PushURL, bytes.NewReader(marshall))
-	r.Header.Add("Content-Type", contentType)
-
-	response, err := m.Client.Do(r)
+	r, err := http.NewRequest(http.MethodPost, m.pushURL, bytes.NewReader(marshall))
 	if err != nil {
-		return fmt.Errorf("error sending push metric request: %v", err)
+		return fmt.Errorf("error creating request: %v", err)
+	}
+	r.Header.Add("Content-Type", "application/json")
+
+	response, err := m.client.Do(r)
+	if err != nil {
+		return fmt.Errorf("error sending push metrics request: %v", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		readBody, err := io.ReadAll(response.Body)
 		if err != nil {
-			return fmt.Errorf("status %s while sending metric", response.Status)
+			return fmt.Errorf("status %s while sending metrics: %v", response.Status, err)
 		}
-		log.Printf("status %s while sending metric on \"update\" path : %s\n", response.Status, string(readBody))
-	}
-	return nil
-}
-
-func (m MetricCollector) PushMetrics() error {
-	var accumulatedErrs string
-	for _, metric := range m.Storage.GetAllMetrics() {
-		err := m.sendMetric(metric)
-		if err != nil {
-			accumulatedErrs += err.Error() + "\n"
-		}
+		return fmt.Errorf("status %s while sending metrics on \"updates\" path: %s", response.Status, string(readBody))
 	}
 
-	if accumulatedErrs != "" {
-		return fmt.Errorf(accumulatedErrs)
-	}
 	return nil
 }

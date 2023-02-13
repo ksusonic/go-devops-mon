@@ -1,30 +1,39 @@
 package agent
 
 import (
+	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+
+	"go.uber.org/zap"
 )
 
+var pollCounterDelta int64 = 1
+
 type MetricCollector struct {
+	Logger      *zap.Logger
 	Storage     metrics.AgentMetricStorage
 	CollectChan <-chan time.Time
 	PushChan    <-chan time.Time
-	PushURL     string
-	Client      http.Client
+	pushURL     string
+	client      http.Client
+	HashService metrics.HashService
 }
 
 func NewMetricCollector(
 	cfg *Config,
+	logger *zap.Logger,
 	storage metrics.AgentMetricStorage,
+	service metrics.HashService,
 ) (*MetricCollector, error) {
 	u := url.URL{
 		Scheme: cfg.AddressScheme,
 		Host:   cfg.Address,
-		Path:   "/update/",
+		Path:   "/updates/",
 	}
 	pollInterval, err := time.ParseDuration(cfg.PollInterval)
 	if err != nil {
@@ -34,12 +43,15 @@ func NewMetricCollector(
 	if err != nil {
 		return nil, err
 	}
+
 	return &MetricCollector{
+		Logger:      logger,
 		Storage:     storage,
 		CollectChan: time.NewTicker(pollInterval).C,
 		PushChan:    time.NewTicker(reportInterval).C,
-		PushURL:     u.String(),
-		Client:      http.Client{},
+		pushURL:     u.String(),
+		client:      http.Client{},
+		HashService: service,
 	}, nil
 }
 
@@ -158,18 +170,31 @@ func (m MetricCollector) CollectStat() {
 			Name:  "TotalAlloc",
 			Value: float64(rtm.TotalAlloc),
 		},
+		{
+			Name:  "RandomValue",
+			Value: rand.Float64(),
+		},
 	}
 
-	for _, metric := range currentGaugeMetrics {
-		m.Storage.SetMetric(metrics.Metrics{
-			ID:    metric.Name,
+	// gauge
+	for i := range currentGaugeMetrics {
+		err := m.Storage.SetMetric(metrics.Metrics{
+			ID:    currentGaugeMetrics[i].Name,
 			MType: metrics.GaugeMType,
-			Delta: nil,
-			Value: &metric.Value,
+			Value: &currentGaugeMetrics[i].Value,
 		})
+		if err != nil {
+			m.Logger.Error("Could not set hash", zap.String("id", currentGaugeMetrics[i].Name), zap.Error(err))
+		}
 	}
 
 	// counters
-	m.Storage.IncPollCount()
-	m.Storage.RandomizeRandomValue()
+	err := m.Storage.SetMetric(metrics.Metrics{
+		ID:    "PollCount",
+		MType: metrics.CounterMType,
+		Delta: &pollCounterDelta,
+	})
+	if err != nil {
+		m.Logger.Error("could not set hash", zap.String("id", "PollCount"), zap.Error(err))
+	}
 }

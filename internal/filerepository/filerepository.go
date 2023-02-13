@@ -2,24 +2,51 @@ package filerepository
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
-	"log"
+	"go.uber.org/zap"
 	"os"
+	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type FileRepository struct {
-	file *os.File
+	file   *os.File
+	logger *zap.Logger
 }
 
-func NewFileRepository(filename string) (*FileRepository, error) {
+func NewFileRepository(filename string, logger *zap.Logger) (*FileRepository, error) {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FileRepository{file: file}, nil
+	return &FileRepository{file: file, logger: logger}, nil
+}
+
+func (p *FileRepository) DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]metrics.Metrics, error), duration time.Duration) {
+	p.logger.Info("Started repository drop routine ", zap.String("destination", p.Info()), zap.Duration("drop-duration", duration))
+
+	ticker := time.NewTicker(duration)
+	for {
+		select {
+		case <-ticker.C:
+			allMetrics, err := getMetricsFunc(ctx)
+			if err != nil {
+				p.logger.Error("Error while getting all metrics: ", zap.Error(err))
+				continue
+			}
+			if err = p.SaveMetrics(allMetrics); err != nil {
+				p.logger.Error("Error while saving metrics to repository: ", zap.Error(err))
+			} else {
+				p.logger.Debug("Saved metrics to repository")
+			}
+		case <-ctx.Done():
+			p.logger.Info("Finished repository routine")
+			return
+		}
+	}
 }
 
 func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
@@ -39,8 +66,6 @@ func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
 }
 
 func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
-	log.Printf("Saving %d metrics\n", len(metrics))
-
 	// clear old metrics
 	err := p.file.Truncate(0)
 	if err != nil {

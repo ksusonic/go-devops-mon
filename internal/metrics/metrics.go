@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 )
@@ -16,13 +15,14 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // Значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 func (m Metrics) Bind(*http.Request) error {
 	if m.ID == "" {
-		return errors.New("missing ID of metric")
+		return fmt.Errorf("missing ID of metric")
 	} else if m.MType == "" {
-		return errors.New("missing type of metric")
+		return fmt.Errorf("missing type of metric")
 	}
 
 	return nil
@@ -31,9 +31,9 @@ func (m Metrics) Bind(*http.Request) error {
 func (m Metrics) String() string {
 	switch m.MType {
 	case CounterMType:
-		return fmt.Sprintf("metric %s of type %s with value %d", m.ID, m.MType, *m.Delta)
+		return fmt.Sprintf("metric %s of type %s with value %d and hash %s", m.ID, m.MType, *m.Delta, m.Hash)
 	case GaugeMType:
-		return fmt.Sprintf("metric %s of type %s with value %f", m.ID, m.MType, *m.Value)
+		return fmt.Sprintf("metric %s of type %s with value %f and hash %s", m.ID, m.MType, *m.Value, m.Hash)
 	default:
 		return ""
 	}
