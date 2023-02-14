@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"go.uber.org/zap"
 )
@@ -22,6 +24,7 @@ type MetricCollector struct {
 	pushURL     string
 	client      http.Client
 	HashService metrics.HashService
+	RateLimit   int
 }
 
 func NewMetricCollector(
@@ -52,6 +55,7 @@ func NewMetricCollector(
 		pushURL:     u.String(),
 		client:      http.Client{},
 		HashService: service,
+		RateLimit:   cfg.RateLimit,
 	}, nil
 }
 
@@ -184,7 +188,7 @@ func (m MetricCollector) CollectStat() {
 			Value: &currentGaugeMetrics[i].Value,
 		})
 		if err != nil {
-			m.Logger.Error("Could not set hash", zap.String("id", currentGaugeMetrics[i].Name), zap.Error(err))
+			m.Logger.Error("failed to add metric", zap.String("id", currentGaugeMetrics[i].Name), zap.Error(err))
 		}
 	}
 
@@ -195,6 +199,50 @@ func (m MetricCollector) CollectStat() {
 		Delta: &pollCounterDelta,
 	})
 	if err != nil {
-		m.Logger.Error("could not set hash", zap.String("id", "PollCount"), zap.Error(err))
+		m.Logger.Error("failed to add metric", zap.String("id", "PollCount"), zap.Error(err))
+	}
+}
+
+func (m MetricCollector) CollectPsUtil() {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		m.Logger.Fatal("Cannot get VirtualMemory info", zap.Error(err))
+	}
+
+	times, err := cpu.Times(false)
+	if err != nil {
+		m.Logger.Error("Could not get cpu stats", zap.Error(err))
+		return
+	} else if len(times) == 0 {
+		m.Logger.Fatal("Cpu len is 0, cannot get info")
+	}
+
+	cpuAvg := times[0].User + times[0].System
+
+	for _, metric := range []struct {
+		name  string
+		value float64
+	}{
+		{
+			name:  "TotalMemory",
+			value: float64(v.Total),
+		},
+		{
+			name:  "FreeMemory",
+			value: float64(v.Free),
+		},
+		{
+			name:  "CPUutilization1",
+			value: cpuAvg,
+		},
+	} {
+		err := m.Storage.SetMetric(metrics.Metrics{
+			ID:    metric.name,
+			MType: metrics.GaugeMType,
+			Value: &metric.value,
+		})
+		if err != nil {
+			m.Logger.Error("failed to add metric", zap.String("id", metric.name), zap.Error(err))
+		}
 	}
 }

@@ -4,26 +4,36 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"sync"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
-func (m MetricCollector) PushMetrics() error {
-	var accumulatedErrs string
+func (m MetricCollector) PushMetrics() {
+	metricCh := make(chan metrics.Metrics)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < m.RateLimit; i++ {
+		go func() {
+			for metric := range metricCh {
+				wg.Done()
+				err := m.sendMetric(metric)
+				if err != nil {
+					m.Logger.Error("error pushing metric", zap.Error(err))
+				}
+			}
+		}()
+	}
+
 	allMetrics := m.Storage.GetAllMetrics()
-
-	for i := range allMetrics {
-		err := m.sendMetric(allMetrics[i])
-		if err != nil {
-			accumulatedErrs += err.Error() + "\n"
-		}
+	for _, metric := range allMetrics {
+		wg.Add(1)
+		metricCh <- metric
 	}
-
-	if accumulatedErrs != "" {
-		return fmt.Errorf(accumulatedErrs)
-	}
-	return nil
+	wg.Wait()
 }
 
 func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
@@ -57,5 +67,4 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 	}
 
 	return nil
-
 }
