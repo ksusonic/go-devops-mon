@@ -4,30 +4,38 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"io"
 	"net/http"
-
-	"go.uber.org/zap"
 )
 
 func (m MetricCollector) PushMetrics() error {
+	var accumulatedErrs string
 	allMetrics := m.Storage.GetAllMetrics()
+
 	for i := range allMetrics {
-		err := m.HashService.SetHash(&allMetrics[i])
+		err := m.sendMetric(allMetrics[i])
 		if err != nil {
-			m.Logger.Error("could not set hash", zap.String("id", allMetrics[i].ID), zap.Error(err))
+			accumulatedErrs += err.Error() + "\n"
 		}
 	}
 
-	if len(allMetrics) == 0 {
-		m.Logger.Debug("currently no metrics. push skipped")
-		return nil
+	if accumulatedErrs != "" {
+		return fmt.Errorf(accumulatedErrs)
+	}
+	return nil
+}
+
+func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
+	err := m.HashService.SetHash(&metric)
+	if err != nil {
+		return fmt.Errorf("could not set hash for metric %s: %v", metric.ID, err)
+	}
+	marshall, err := json.Marshal(metric)
+	if err != nil {
+		return fmt.Errorf("could not marshall %s: %v", metric.ID, err)
 	}
 
-	marshall, err := json.Marshal(allMetrics)
-	if err != nil {
-		return fmt.Errorf("error marshalling metric: %v", err)
-	}
 	r, err := http.NewRequest(http.MethodPost, m.pushURL, bytes.NewReader(marshall))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
@@ -49,4 +57,5 @@ func (m MetricCollector) PushMetrics() error {
 	}
 
 	return nil
+
 }
