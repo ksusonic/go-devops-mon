@@ -27,14 +27,12 @@ func main() {
 	for {
 		select {
 		case <-collector.CollectChan:
-			logger.Debug("collected metrics")
-			collector.CollectStat()
+			logger.Debug("started metrics collector")
+			go collector.CollectStat()
+			go collector.CollectPsUtil()
 		case <-collector.PushChan:
-			logger.Debug("pushing metrics...")
-			err := collector.PushMetrics()
-			if err != nil {
-				logger.Error("error pushing metrics", zap.Error(err))
-			}
+			logger.Debug("started pushing metrics")
+			go collector.PushMetrics()
 		}
 	}
 }

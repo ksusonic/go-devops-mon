@@ -12,6 +12,7 @@ type Config struct {
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
 	SecretKey      string `env:"KEY"`
+	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
 func NewConfig() (*Config, error) {
@@ -21,6 +22,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.ReportInterval, "r", "10s", "report interval")
 	flag.StringVar(&cfg.PollInterval, "p", "2s", "collect metrics interval")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
+	flag.IntVar(&cfg.RateLimit, "l", 1, "rate limit for sending metrics")
 
 	flag.Parse()
 
