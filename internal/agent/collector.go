@@ -70,7 +70,8 @@ func (m MetricCollector) CollectStat() {
 		{
 			Name:  "Alloc",
 			Value: float64(rtm.Alloc),
-		}, {
+		},
+		{
 			Name:  "BuckHashSys",
 			Value: float64(rtm.BuckHashSys),
 		},

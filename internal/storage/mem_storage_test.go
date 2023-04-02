@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
@@ -75,5 +76,31 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 			require.NotNil(t, result)
 			assert.Equal(t, tt.args, result)
 		})
+	}
+}
+
+func BenchmarkMemStorage_SetMetrics(b *testing.B) {
+	const poolSize = 10
+	memStorage := NewMemStorage()
+	var valuePool [poolSize]float64
+	var metricsToSet = make([]metrics.Metrics, poolSize)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		for i := 0; i < poolSize; i++ {
+			valuePool[i] = rand.Float64()
+			metricsToSet[i] = metrics.Metrics{
+				ID:    "metric" + string(rune(rand.Intn(3))),
+				MType: metrics.GaugeMType,
+				Value: &valuePool[0],
+			}
+		}
+		b.StartTimer()
+
+		err := memStorage.SetMetrics(context.Background(), &metricsToSet)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
