@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -29,12 +30,18 @@ func (m Metrics) Bind(*http.Request) error {
 }
 
 func (m Metrics) String() string {
+	builder := strings.Builder{}
 	switch m.MType {
 	case CounterMType:
-		return fmt.Sprintf("metric %s of type %s with value %d and hash %s", m.ID, m.MType, *m.Delta, m.Hash)
+		builder.WriteString(fmt.Sprintf("metric %s of type %s with value %d", m.ID, m.MType, *m.Delta))
 	case GaugeMType:
-		return fmt.Sprintf("metric %s of type %s with value %f and hash %s", m.ID, m.MType, *m.Value, m.Hash)
+		builder.WriteString(fmt.Sprintf("metric %s of type %s with value %f", m.ID, m.MType, *m.Value))
 	default:
 		return ""
 	}
+	if m.Hash != "" {
+		builder.WriteString(" and hash: ")
+		builder.WriteString(m.Hash)
+	}
+	return builder.String()
 }
