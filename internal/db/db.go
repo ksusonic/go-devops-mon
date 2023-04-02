@@ -118,7 +118,7 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 		case metrics.GaugeMType:
 			_, err = gaugeStmt.ExecContext(ctx, metric.ID, *metric.Value)
 		case metrics.CounterMType:
-			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2;", metric.MType, metric.ID)
+			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;", metric.MType, metric.ID)
 			currentMetric, err2 := rowToMetric(metricRow)
 			if err2 == nil {
 				// plus current delta
@@ -146,7 +146,7 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 func (d DB) GetMetric(ctx context.Context, type_, name string) (metrics.Metrics, error) {
 	row := d.db.QueryRowContext(
 		ctx,
-		"SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2;",
+		"SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;",
 		type_,
 		name,
 	)

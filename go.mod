@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
-	github.com/go-chi/chi/v5 v5.0.8
+	github.com/go-chi/chi/v5 v5.0.9-0.20230331112916-fd8a51eb979a
 	github.com/go-chi/render v1.0.2
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/shirou/gopsutil/v3 v3.23.1
