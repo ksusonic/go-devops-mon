@@ -102,30 +102,30 @@ jobs:
       - name: "Code increment #1"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter1' ||
-          github.head_ref == 'iter2' ||
-          github.head_ref == 'iter3' ||
-          github.head_ref == 'iter4' ||
-          github.head_ref == 'iter5' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment1' ||
+          github.head_ref == 'increment2' ||
+          github.head_ref == 'increment3' ||
+          github.head_ref == 'increment4' ||
+          github.head_ref == 'increment5' ||
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           devopstest -test.v -test.run=^TestIteration1$ \
             -agent-binary-path=cmd/agent/agent
@@ -152,29 +152,29 @@ jobs:
       - name: "Code increment #2"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter2' ||
-          github.head_ref == 'iter3' ||
-          github.head_ref == 'iter4' ||
-          github.head_ref == 'iter5' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment2' ||
+          github.head_ref == 'increment3' ||
+          github.head_ref == 'increment4' ||
+          github.head_ref == 'increment5' ||
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           devopstest -test.v -test.run=^TestIteration2[b]*$ \
             -source-path=. \
@@ -189,28 +189,28 @@ jobs:
       - name: "Code increment #3"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter3' ||
-          github.head_ref == 'iter4' ||
-          github.head_ref == 'iter5' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment3' ||
+          github.head_ref == 'increment4' ||
+          github.head_ref == 'increment5' ||
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           devopstest -test.v -test.run=^TestIteration3[b]*$ \
             -source-path=. \
@@ -237,27 +237,27 @@ jobs:
       - name: "Code increment #4"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter4' ||
-          github.head_ref == 'iter5' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment4' ||
+          github.head_ref == 'increment5' ||
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           devopstest -test.v -test.run=^TestIteration4$ \
             -source-path=. \
@@ -276,26 +276,26 @@ jobs:
       - name: "Code increment #5"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter5' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment5' ||
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -317,25 +317,25 @@ jobs:
       - name: "Code increment #6"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter6' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment6' ||
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -364,24 +364,24 @@ jobs:
       - name: "Code increment #7"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter7' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment7' ||
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -401,23 +401,23 @@ jobs:
       - name: "Code increment #8"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter8' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment8' ||
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -465,22 +465,22 @@ jobs:
       - name: "Code increment #9"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter9' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment9' ||
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -505,21 +505,21 @@ jobs:
       - name: "Code increment #10"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter10' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment10' ||
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -541,20 +541,20 @@ jobs:
       - name: "Code increment #11"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter11' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment11' ||
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -581,19 +581,19 @@ jobs:
       - name: "Code increment #12"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter12' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment12' ||
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -616,18 +616,18 @@ jobs:
       - name: "Code increment #13"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter13' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment13' ||
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           devopstest -test.v -test.run=^TestIteration13$ \
             -source-path=.
@@ -645,17 +645,17 @@ jobs:
       - name: "Code increment #14"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter14' ||
-          github.head_ref == 'iter15' ||
-          github.head_ref == 'iter16' ||
-          github.head_ref == 'iter17' ||
-          github.head_ref == 'iter18' ||
-          github.head_ref == 'iter19' ||
-          github.head_ref == 'iter20' ||
-          github.head_ref == 'iter21' ||
-          github.head_ref == 'iter22' ||
-          github.head_ref == 'iter23' ||
-          github.head_ref == 'iter24'
+          github.head_ref == 'increment14' ||
+          github.head_ref == 'increment15' ||
+          github.head_ref == 'increment16' ||
+          github.head_ref == 'increment17' ||
+          github.head_ref == 'increment18' ||
+          github.head_ref == 'increment19' ||
+          github.head_ref == 'increment20' ||
+          github.head_ref == 'increment21' ||
+          github.head_ref == 'increment22' ||
+          github.head_ref == 'increment23' ||
+          github.head_ref == 'increment24'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
