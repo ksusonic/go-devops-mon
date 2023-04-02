@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"sync"
+
+	"go.uber.org/zap"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )

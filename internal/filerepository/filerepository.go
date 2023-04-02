@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )

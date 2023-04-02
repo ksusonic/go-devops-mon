@@ -3,8 +3,9 @@ package agent
 import (
 	"testing"
 
-	"github.com/ksusonic/go-devops-mon/internal/storage"
 	"go.uber.org/zap"
+
+	"github.com/ksusonic/go-devops-mon/internal/storage"
 )
 
 var logger, _ = zap.NewDevelopment()
