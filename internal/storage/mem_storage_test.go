@@ -9,10 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
-
-var logger, _ = zap.NewDevelopment()
 
 func TestMemStorage_IncPollCount(t *testing.T) {
 	ctx := context.Background()
@@ -79,28 +76,61 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	}
 }
 
-func BenchmarkMemStorage_SetMetrics(b *testing.B) {
-	const poolSize = 10
-	memStorage := NewMemStorage()
-	var valuePool [poolSize]float64
-	var metricsToSet = make([]metrics.Metrics, poolSize)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		for i := 0; i < poolSize; i++ {
-			valuePool[i] = rand.Float64()
-			metricsToSet[i] = metrics.Metrics{
+func BenchmarkMemStorage(b *testing.B) {
+	GenerateMetricPool := func(size int) []metrics.Metrics {
+		var metricPool = make([]metrics.Metrics, size)
+		for i := 0; i < size; i++ {
+			value := rand.Float64()
+			metricPool[i] = metrics.Metrics{
 				ID:    "metric" + string(rune(rand.Intn(3))),
 				MType: metrics.GaugeMType,
-				Value: &valuePool[0],
+				Value: &value,
 			}
 		}
-		b.StartTimer()
-
-		err := memStorage.SetMetrics(context.Background(), &metricsToSet)
-		if err != nil {
-			b.Error(err)
-		}
+		return metricPool
 	}
+
+	const defaultPoolSize = 5
+	memStorage := NewMemStorage()
+
+	b.Run("SetMetrics", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			metricPool := GenerateMetricPool(defaultPoolSize)
+			b.StartTimer()
+
+			err := memStorage.SetMetrics(context.Background(), &metricPool)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+	b.Run("SetMetric", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			metricPool := GenerateMetricPool(defaultPoolSize)
+			b.StartTimer()
+
+			for j := 0; j < len(metricPool); j++ {
+				_, err := memStorage.SetMetric(context.Background(), metricPool[j])
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		}
+	})
+	b.Run("GetMetric", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			metricPool := GenerateMetricPool(1)
+			b.StartTimer()
+
+			metric := &metricPool[0]
+			_, err := memStorage.GetMetric(context.Background(), metric.MType, metric.ID)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
 }
