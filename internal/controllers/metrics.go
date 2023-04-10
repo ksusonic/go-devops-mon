@@ -30,21 +30,22 @@ func NewMetricController(logger *zap.Logger, storage metrics.ServerMetricStorage
 func (c *Controller) Router() *chi.Mux {
 	router := chi.NewRouter()
 
-	router.Get("/value/{type}/{name}", c.getMetricPathHandler)
-	router.Get("/", c.getAllMetricsHandler)
+	router.Get("/value/{type}/{name}", c.GetMetricPathHandler)
+	router.Get("/", c.GetAllMetricsHandler)
 
-	router.Post("/update/{type}/{name}/{value}", c.updateMetricPathHandler)
+	router.Post("/update/{type}/{name}/{value}", c.UpdateMetricPathHandler)
 
-	router.Post("/update/", c.updateMetricHandler)
-	router.Post("/updates/", c.updatesMetricHandler)
-	router.Post("/value/", c.getMetricHandler)
+	router.Post("/update/", c.UpdateMetricHandler)
+	router.Post("/updates/", c.UpdatesMetricHandler)
+	router.Post("/value/", c.GetMetricHandler)
 
-	router.Get("/ping", c.pingHandler)
+	router.Get("/ping", c.PingHandler)
 
 	return router
 }
 
-func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request) {
+// GetMetricPathHandler - get metric by query params: type, name
+func (c *Controller) GetMetricPathHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
 	value, err := c.Storage.GetMetric(r.Context(), reqType, reqName)
@@ -64,7 +65,8 @@ func (c *Controller) getMetricPathHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
+// GetMetricHandler - get metric by body in post request
+func (c *Controller) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
 		render.Render(w, r, ErrBadRequest(err, c.Logger))
@@ -91,7 +93,8 @@ func (c *Controller) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
+// GetAllMetricsHandler - get all current metrics in a list
+func (c *Controller) GetAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	metricsMapping, err := c.Storage.GetMappedByTypeAndNameMetrics(r.Context())
 	if err != nil {
 		c.Logger.Error("could not GetMappedByTypeAndNameMetrics", zap.Error(err))
@@ -108,8 +111,8 @@ func (c *Controller) getAllMetricsHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// updateMetricPathHandler — updates metric by type, name and value
-func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Request) {
+// UpdateMetricPathHandler — updates metric by type, name and value
+func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := chi.URLParam(r, "type")
 	reqName := chi.URLParam(r, "name")
 	reqRawValue := chi.URLParam(r, "value")
@@ -162,8 +165,8 @@ func (c *Controller) updateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// updateMetricHandler — updates metric by Metrics data in body
-func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
+// UpdateMetricHandler — updates metric by Metrics data in body
+func (c *Controller) UpdateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m := &metrics.Metrics{}
 	if err := render.Bind(r, m); err != nil {
 		render.Render(w, r, ErrBadRequest(err, c.Logger))
@@ -188,7 +191,7 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 
 		marshal, err := json.Marshal(resultMetric)
 		if err != nil {
-			c.Logger.Fatal("error while marshalling in updateMetricHandler", zap.Error(err))
+			c.Logger.Fatal("error while marshalling in UpdateMetricHandler", zap.Error(err))
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -199,8 +202,8 @@ func (c *Controller) updateMetricHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// updatesMetricHandler — updates metric by []Metrics data in body
-func (c *Controller) updatesMetricHandler(w http.ResponseWriter, r *http.Request) {
+// UpdatesMetricHandler — updates metric by []Metrics data in body
+func (c *Controller) UpdatesMetricHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		c.Logger.Error("could not read request body", zap.Error(err))

@@ -9,19 +9,23 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
 
 	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 )
 
 func main() {
-	logger, _ := zap.NewDevelopment()
-
 	config, err := server.NewConfig()
 	if err != nil {
-		logger.Fatal("error reading config", zap.Error(err))
+		panic("error reading config: " + err.Error())
 	}
+
+	logger, _ := getLogger(config.Debug)
 
 	router := chi.NewRouter()
 	router.Use(middleware.GzipEncoder)
+	if config.Debug {
+		router.Mount("/debug", chiMiddleware.Profiler())
+	}
 
 	metricsStorage, err := server.NewStorage(config, logger)
 	if err != nil {
@@ -41,5 +45,13 @@ func main() {
 	err = http.ListenAndServe(config.Address, router)
 	if err != nil {
 		logger.Fatal("shutdown", zap.Error(err))
+	}
+}
+
+func getLogger(debug bool) (*zap.Logger, error) {
+	if debug {
+		return zap.NewDevelopment()
+	} else {
+		return zap.NewProduction()
 	}
 }

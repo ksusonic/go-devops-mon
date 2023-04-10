@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
@@ -18,20 +20,26 @@ import (
 	"go.uber.org/zap"
 )
 
-var logger, _ = zap.NewDevelopment()
-
-type hashService struct {
+type TestServer struct {
+	Server *httptest.Server
 }
 
-func (h hashService) SetHash(*metrics.Metrics) error {
-	return nil
-}
-func (h hashService) ValidateHash(*metrics.Metrics) error {
-	return nil
+func NewTestServer(metricStorage metrics.ServerMetricStorage) TestServer {
+	router := chi.NewRouter()
+	r := NewMetricController(zap.NewExample(), metricStorage, hash.NewService(""))
+	router.Mount("/", r.Router())
+	ts := httptest.NewServer(router)
+	return TestServer{
+		Server: ts,
+	}
 }
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (int, []byte) {
-	req, err := http.NewRequest(method, ts.URL+path, body)
+func (s *TestServer) Close() {
+	s.Server.Close()
+}
+
+func (s *TestServer) testRequest(t *testing.T, method, path string, body io.Reader) (int, []byte) {
+	req, err := http.NewRequest(method, s.Server.URL+path, body)
 	require.NoError(t, err)
 
 	if body != nil {
@@ -49,36 +57,30 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	return resp.StatusCode, respBody
 }
 
-func TestController_updateMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
-	router := chi.NewRouter()
-	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
-	router.Mount("/", r.Router())
-	ts := httptest.NewServer(router)
+func TestController_UpdateMetricPathHandler(t *testing.T) {
+	memStorage := storage.NewMemStorage()
+	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01", nil)
+	statusCode, _ := ts.testRequest(t, "POST", "/update/gauge/BuckHashSys/123.01", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/noSuchMetric/123.01", nil)
+	statusCode, _ = ts.testRequest(t, "POST", "/update/gauge/noSuchMetric/123.01", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "POST", "/update/superGauge/BuckHashSys/123.01", nil)
+	statusCode, _ = ts.testRequest(t, "POST", "/update/superGauge/BuckHashSys/123.01", nil)
 	assert.Equal(t, http.StatusNotImplemented, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/", nil)
+	statusCode, _ = ts.testRequest(t, "POST", "/update/counter/", nil)
 	assert.Equal(t, http.StatusNotFound, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/RandomValue/12345678", nil)
+	statusCode, _ = ts.testRequest(t, "POST", "/update/counter/RandomValue/12345678", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 }
 
-func TestController_updateMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
-	router := chi.NewRouter()
-	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
-	router.Mount("/", r.Router())
-	ts := httptest.NewServer(router)
+func TestController_UpdateMetricHandler(t *testing.T) {
+	memStorage := storage.NewMemStorage()
+	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
 	var testValue = 123.0123
@@ -119,7 +121,7 @@ func TestController_updateMetricHandler(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		statusCode, _ := testRequest(t, ts, "POST", "/update/", bytes.NewReader(marshal))
+		statusCode, _ := ts.testRequest(t, "POST", "/update/", bytes.NewReader(marshal))
 		assert.Equal(t, tt.ExpectedStatus, statusCode)
 
 		if tt.ExpectedStatus == http.StatusOK {
@@ -143,35 +145,29 @@ func TestController_updateMetricHandler(t *testing.T) {
 	}
 	marshal, _ := json.Marshal(simpleCounterMetric)
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/counter/", bytes.NewReader(marshal))
+	statusCode, _ := ts.testRequest(t, "POST", "/update/counter/", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusNotFound, statusCode)
 
-	statusCode, _ = testRequest(t, ts, "POST", "/update/counter/noSuchCounter/1234567", bytes.NewReader(marshal))
+	statusCode, _ = ts.testRequest(t, "POST", "/update/counter/noSuchCounter/1234567", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusOK, statusCode)
 }
 
-func TestController_getMetricPathHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
-	router := chi.NewRouter()
-	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
-	router.Mount("/", r.Router())
-	ts := httptest.NewServer(router)
+func TestController_GetMetricPathHandler(t *testing.T) {
+	memStorage := storage.NewMemStorage()
+	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
-	statusCode, _ := testRequest(t, ts, "POST", "/update/gauge/BuckHashSys/123.01", nil)
+	statusCode, _ := ts.testRequest(t, "POST", "/update/gauge/BuckHashSys/123.01", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 
-	statusCode, res := testRequest(t, ts, "GET", "/value/gauge/BuckHashSys", nil)
+	statusCode, res := ts.testRequest(t, "GET", "/value/gauge/BuckHashSys", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, "123.01", string(res))
 }
 
-func TestController_getMetricHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
-	router := chi.NewRouter()
-	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
-	router.Mount("/", r.Router())
-	ts := httptest.NewServer(router)
+func TestController_GetMetricHandler(t *testing.T) {
+	memStorage := storage.NewMemStorage()
+	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
 	testValue := 123.01
@@ -185,7 +181,7 @@ func TestController_getMetricHandler(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	statusCode, _ := testRequest(t, ts, "POST", "/update/", bytes.NewReader(marshal))
+	statusCode, _ := ts.testRequest(t, "POST", "/update/", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusOK, statusCode)
 
 	marshal, err = json.Marshal(metrics.Metrics{
@@ -195,7 +191,7 @@ func TestController_getMetricHandler(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	statusCode, res := testRequest(t, ts, "POST", "/value/", bytes.NewReader(marshal))
+	statusCode, res := ts.testRequest(t, "POST", "/value/", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusOK, statusCode)
 	var actual metrics.Metrics
 	err = json.Unmarshal(res, &actual)
@@ -205,12 +201,47 @@ func TestController_getMetricHandler(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestController_getAllMetricsHandler(t *testing.T) {
-	var memStorage metrics.ServerMetricStorage = storage.NewMemStorage()
-	router := chi.NewRouter()
-	r := NewMetricController(zap.NewExample(), memStorage, hashService{})
-	router.Mount("/", r.Router())
-	ts := httptest.NewServer(router)
+func ExampleController_GetMetricHandler() {
+	memStorage := storage.NewMemStorage()
+	testValue := 123.01
+	expected := metrics.Metrics{
+		ID:    "BuckHashSys",
+		MType: "gauge",
+		Delta: nil,
+		Value: &testValue,
+	}
+	memStorage.SetMetric(context.Background(), expected)
+	ts := NewTestServer(memStorage)
+	defer ts.Close()
+
+	marshal, _ := json.Marshal(metrics.Metrics{
+		ID:    "BuckHashSys",
+		MType: "gauge",
+	})
+	req, _ := http.NewRequest("POST", ts.Server.URL+"/value/", bytes.NewReader(marshal))
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	respBody, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	var actual metrics.Metrics
+	json.Unmarshal(respBody, &actual)
+
+	fmt.Println(actual)
+	actual.Hash = "some-hash"
+	fmt.Println(actual)
+
+	// Output:
+	// metric BuckHashSys of type gauge with value 123.010000
+	// metric BuckHashSys of type gauge with value 123.010000 and hash: some-hash
+}
+
+func TestController_GetAllMetricsHandler(t *testing.T) {
+	memStorage := storage.NewMemStorage()
+	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
 	for _, request := range []string{
@@ -244,12 +275,12 @@ func TestController_getAllMetricsHandler(t *testing.T) {
 		"/update/counter/PollCount/5",
 		"/update/counter/RandomValue/3916589616287113937",
 	} {
-		statusCode, _ := testRequest(t, ts, "POST", request, nil)
+		statusCode, _ := ts.testRequest(t, "POST", request, nil)
 		assert.Equal(t, http.StatusOK, statusCode)
 	}
 	expected := `{"counter":{"PollCount":5,"RandomValue":3916589616287113937},"gauge":{"Alloc":218216,"BuckHashSys":3829,"Frees":24,"GCCPUFraction":0,"GCSys":7963072,"HeapAlloc":218216.123,"HeapIdle":3080192,"HeapInuse":786432.01,"HeapObjects":613,"HeapReleased":3047424,"HeapSys":3866624,"LastGC":0,"Lookups":0,"MCacheInuse":14400,"MCacheSys":15600,"MSpanInuse":30528,"MSpanSys":32544,"Mallocs":637,"NextGC":4194304,"NumForcedGC":0,"NumGC":0,"OtherSys":749387,"PauseTotalNs":0,"StackInuse":327680,"StackSys":327680,"Sys":12958736,"TotalAlloc":218216}}`
 
-	statusCode, actual := testRequest(t, ts, "GET", "/", nil)
+	statusCode, actual := ts.testRequest(t, "GET", "/", nil)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.JSONEq(t, expected, string(actual))
 }

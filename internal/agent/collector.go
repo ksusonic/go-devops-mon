@@ -7,9 +7,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"go.uber.org/zap"
 )
@@ -70,7 +71,8 @@ func (m MetricCollector) CollectStat() {
 		{
 			Name:  "Alloc",
 			Value: float64(rtm.Alloc),
-		}, {
+		},
+		{
 			Name:  "BuckHashSys",
 			Value: float64(rtm.BuckHashSys),
 		},

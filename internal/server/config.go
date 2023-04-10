@@ -15,6 +15,7 @@ type Config struct {
 	RestoreFile              bool          `env:"RESTORE"`
 	SecretKey                string        `env:"KEY"`
 	DatabaseURL              string        `env:"DATABASE_DSN"`
+	Debug                    bool          `env:"DEBUG"`
 }
 
 func NewConfig() (*Config, error) {
@@ -25,6 +26,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.FileDropInterval, "i", "300s", "interval to save metrics to file")
 	flag.StringVar(&cfg.StoreFile, "f", "/tmp/devops-metrics-db.json", "path to file for metrics save")
 	flag.StringVar(&cfg.DatabaseURL, "d", "", "url for database")
+	flag.BoolVar(&cfg.Debug, "debug", false, "debug mode")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 
 	flag.Parse()

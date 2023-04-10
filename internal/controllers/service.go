@@ -9,7 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func (c *Controller) pingHandler(w http.ResponseWriter, r *http.Request) {
+// PingHandler - makes ping to DB
+func (c *Controller) PingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
