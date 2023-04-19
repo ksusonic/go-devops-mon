@@ -1,0 +1,29 @@
+name: staticlint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  staticlint:
+    runs-on: ubuntu-latest
+    container: golang:1.19
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build staticlint binary
+        run: |
+          go build -o $GITHUB_WORKSPACE/.tools/staticlint cmd/staticlint/main.go
+
+      - name: Setup autotest binary
+        run: |
+          chmod -R +x $GITHUB_WORKSPACE/.tools/staticlint
+          mv $GITHUB_WORKSPACE/.tools/staticlint /usr/local/bin/staticlint
+
+      - name: Run staticlint
+        run: |
+          go vet -vettool=$(which staticlint) ./...

@@ -1,6 +1,9 @@
+//go:generate go run
+
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/ksusonic/go-devops-mon/internal/controllers"
@@ -13,7 +16,15 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	fmt.Println(getBuildInfo())
+
 	config, err := server.NewConfig()
 	if err != nil {
 		panic("error reading config: " + err.Error())
@@ -54,4 +65,17 @@ func getLogger(debug bool) (*zap.Logger, error) {
 	} else {
 		return zap.NewProduction()
 	}
+}
+
+func getBuildInfo() string {
+	return fmt.Sprintf(
+		"------------------\n"+
+			"Build version: %s\n"+
+			"Build    date: %s\n"+
+			"Build  commit: %s\n"+
+			"------------------\n",
+		buildVersion,
+		buildDate,
+		buildCommit,
+	)
 }
