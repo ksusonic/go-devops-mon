@@ -16,6 +16,7 @@ type Config struct {
 	SecretKey                string        `env:"KEY"`
 	DatabaseURL              string        `env:"DATABASE_DSN"`
 	Debug                    bool          `env:"DEBUG"`
+	CryptoKeyPath            string        `env:"CRYPTO_KEY"`
 }
 
 func NewConfig() (*Config, error) {
@@ -28,6 +29,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.DatabaseURL, "d", "", "url for database")
 	flag.BoolVar(&cfg.Debug, "debug", false, "debug mode")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
+	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "", "private key for tls")
 
 	flag.Parse()
 

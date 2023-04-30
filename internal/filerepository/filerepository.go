@@ -27,7 +27,7 @@ func NewFileRepository(filename string, logger *zap.Logger) (*FileRepository, er
 }
 
 func (p *FileRepository) DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]metrics.Metrics, error), duration time.Duration) {
-	p.logger.Info("Started repository drop routine ", zap.String("destination", p.Info()), zap.Duration("drop-duration", duration))
+	p.logger.Info("Started repository drop routine ", zap.String("destination", p.DebugInfo()), zap.Duration("drop-duration", duration))
 
 	ticker := time.NewTicker(duration)
 	for {
@@ -91,7 +91,7 @@ func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
 	return nil
 }
 
-func (p *FileRepository) Info() string {
+func (p *FileRepository) DebugInfo() string {
 	return "file: " + p.file.Name()
 }
 

@@ -13,23 +13,30 @@ import (
 	"go.uber.org/zap"
 )
 
+type DecodeService interface {
+	DecryptBytes(b []byte) ([]byte, error)
+}
+
 type Controller struct {
-	Logger      *zap.Logger
-	Storage     metrics.ServerMetricStorage
-	HashService metrics.HashService
+	Logger  *zap.Logger
+	Storage metrics.ServerMetricStorage
+
+	hashService metrics.HashService
+	decoder     DecodeService
 }
 
 func NewMetricController(logger *zap.Logger, storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
 	return &Controller{
 		Logger:      logger,
 		Storage:     storage,
-		HashService: hashService,
+		hashService: hashService,
 	}
 }
 
 func (c *Controller) Router() *chi.Mux {
 	router := chi.NewRouter()
 
+	router.Use()
 	router.Get("/value/{type}/{name}", c.GetMetricPathHandler)
 	router.Get("/", c.GetAllMetricsHandler)
 
@@ -79,7 +86,11 @@ func (c *Controller) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.HashService.SetHash(&value)
+	err = c.hashService.SetHash(&value)
+	if err != nil {
+		c.Logger.Error("error setting hash", zap.Error(err))
+		return
+	}
 
 	marshal, err := json.Marshal(value)
 	if err != nil {
@@ -128,7 +139,7 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			MType: reqType,
 			Value: &value,
 		}
-		if err = c.HashService.SetHash(&m); err != nil {
+		if err = c.hashService.SetHash(&m); err != nil {
 			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
@@ -149,7 +160,7 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			MType: reqType,
 			Delta: &value,
 		}
-		if err = c.HashService.SetHash(&m); err != nil {
+		if err = c.hashService.SetHash(&m); err != nil {
 			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
@@ -173,7 +184,7 @@ func (c *Controller) UpdateMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := c.HashService.ValidateHash(m); err != nil {
+	if err := c.hashService.ValidateHash(m); err != nil {
 		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
 	}
@@ -217,7 +228,7 @@ func (c *Controller) UpdatesMetricHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	for _, m := range metricSlice {
-		if err := c.HashService.ValidateHash(&m); err != nil {
+		if err := c.hashService.ValidateHash(&m); err != nil {
 			render.Render(w, r, ErrBadRequest(err, c.Logger))
 			return
 		}

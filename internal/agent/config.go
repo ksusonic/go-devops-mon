@@ -13,6 +13,7 @@ type Config struct {
 	PollInterval   string `env:"POLL_INTERVAL"`
 	SecretKey      string `env:"KEY"`
 	RateLimit      int    `env:"RATE_LIMIT"`
+	CryptoKeyPath  string `env:"CRYPTO_KEY"`
 }
 
 func NewConfig() (*Config, error) {
@@ -23,6 +24,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.PollInterval, "p", "2s", "collect metrics interval")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 	flag.IntVar(&cfg.RateLimit, "l", 1, "rate limit for sending metrics")
+	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "", "public key for https requests")
 
 	flag.Parse()
 

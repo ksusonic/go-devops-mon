@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/ksusonic/go-devops-mon/internal/agent"
+	"github.com/ksusonic/go-devops-mon/internal/crypt"
 	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
 
@@ -17,10 +18,20 @@ func main() {
 	}
 	memStorage := storage.NewAgentStorage()
 	hashService := hash.NewService(cfg.SecretKey)
-
-	collector, err := agent.NewMetricCollector(cfg, logger, memStorage, hashService)
+	encryptService, err := crypt.NewEncrypter(cfg.CryptoKeyPath)
 	if err != nil {
-		logger.Fatal("error in metric collector", zap.Error(err))
+		logger.Fatal("error creating encrypter", zap.Error(err))
+	}
+
+	collector, err := agent.NewMetricCollector(
+		cfg,
+		logger,
+		memStorage,
+		hashService,
+		encryptService,
+	)
+	if err != nil {
+		logger.Fatal("error creating collector", zap.Error(err))
 	}
 
 	logger.Info("started agent!")
