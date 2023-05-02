@@ -49,7 +49,7 @@ func main() {
 
 	hashService := hash.NewService(config.SecretKey)
 	decryptService, err := crypt.NewDecrypter(config.CryptoKeyPath, logger.Named("decrypter"))
-	if err != nil {
+	if config.CryptoKeyPath != "" && err != nil {
 		logger.Fatal("error creating decrypter", zap.Error(err))
 	}
 	router.Use(middleware.GzipEncoder)

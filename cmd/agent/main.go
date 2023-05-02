@@ -23,7 +23,7 @@ func main() {
 	memStorage := storage.NewAgentStorage()
 	hashService := hash.NewService(cfg.SecretKey)
 	encryptService, err := crypt.NewEncrypter(cfg.CryptoKeyPath)
-	if err != nil {
+	if cfg.CryptoKeyPath != "" && err != nil {
 		logger.Fatal("error creating encrypter", zap.Error(err))
 	}
 
