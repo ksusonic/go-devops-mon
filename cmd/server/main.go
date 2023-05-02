@@ -3,8 +3,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -61,11 +65,25 @@ func main() {
 	)
 	router.Mount("/", metricController.Router())
 
+	var srv = http.Server{Addr: config.Address, Handler: router}
 	logger.Info("Server started!", zap.String("address", config.Address))
-	err = http.ListenAndServe(config.Address, router)
-	if err != nil {
+
+	idleConnsClosed := make(chan struct{})
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		<-sigint
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logger.Info("HTTP server Shutdown", zap.Error(err))
+		}
+		close(idleConnsClosed)
+	}()
+	if err := http.ListenAndServe(config.Address, router); err != http.ErrServerClosed {
 		logger.Fatal("shutdown", zap.Error(err))
 	}
+	<-idleConnsClosed
+	logger.Info("Server Shutdown gracefully")
 }
 
 func getLogger(debug bool) (*zap.Logger, error) {

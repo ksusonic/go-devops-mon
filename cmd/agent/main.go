@@ -1,6 +1,10 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/ksusonic/go-devops-mon/internal/agent"
 	"github.com/ksusonic/go-devops-mon/internal/crypt"
 	"github.com/ksusonic/go-devops-mon/internal/hash"
@@ -34,6 +38,9 @@ func main() {
 		logger.Fatal("error creating collector", zap.Error(err))
 	}
 
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
 	logger.Info("started agent!")
 	for {
 		select {
@@ -44,6 +51,9 @@ func main() {
 		case <-collector.PushChan:
 			logger.Debug("started pushing metrics")
 			go collector.PushMetrics()
+		case <-sigint:
+			logger.Info("Caught interrupt signal")
+			os.Exit(0)
 		}
 	}
 }
