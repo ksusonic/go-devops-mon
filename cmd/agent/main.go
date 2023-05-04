@@ -53,7 +53,7 @@ func main() {
 			go collector.PushMetrics()
 		case <-sigint:
 			logger.Info("Caught interrupt signal")
-			os.Exit(0)
+			return
 		}
 	}
 }
