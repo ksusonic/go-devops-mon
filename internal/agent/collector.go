@@ -18,21 +18,23 @@ import (
 var pollCounterDelta int64 = 1
 
 type MetricCollector struct {
-	Logger      *zap.Logger
-	Storage     metrics.AgentMetricStorage
-	CollectChan <-chan time.Time
-	PushChan    <-chan time.Time
-	pushURL     string
-	client      http.Client
-	HashService metrics.HashService
-	RateLimit   int
+	Logger         *zap.Logger
+	Storage        metrics.AgentMetricStorage
+	CollectChan    <-chan time.Time
+	PushChan       <-chan time.Time
+	pushURL        string
+	client         http.Client
+	hashService    metrics.HashService
+	encryptService metrics.EncryptService
+	RateLimit      int
 }
 
 func NewMetricCollector(
 	cfg *Config,
 	logger *zap.Logger,
 	storage metrics.AgentMetricStorage,
-	service metrics.HashService,
+	hashService metrics.HashService,
+	encryptService metrics.EncryptService,
 ) (*MetricCollector, error) {
 	u := url.URL{
 		Scheme: cfg.AddressScheme,
@@ -49,14 +51,15 @@ func NewMetricCollector(
 	}
 
 	return &MetricCollector{
-		Logger:      logger,
-		Storage:     storage,
-		CollectChan: time.NewTicker(pollInterval).C,
-		PushChan:    time.NewTicker(reportInterval).C,
-		pushURL:     u.String(),
-		client:      http.Client{},
-		HashService: service,
-		RateLimit:   cfg.RateLimit,
+		Logger:         logger,
+		Storage:        storage,
+		CollectChan:    time.NewTicker(pollInterval).C,
+		PushChan:       time.NewTicker(reportInterval).C,
+		pushURL:        u.String(),
+		client:         http.Client{},
+		hashService:    hashService,
+		encryptService: encryptService,
+		RateLimit:      cfg.RateLimit,
 	}, nil
 }
 

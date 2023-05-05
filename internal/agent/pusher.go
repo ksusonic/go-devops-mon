@@ -38,13 +38,19 @@ func (m MetricCollector) PushMetrics() {
 }
 
 func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
-	err := m.HashService.SetHash(&metric)
+	err := m.hashService.SetHash(&metric)
 	if err != nil {
 		return fmt.Errorf("could not set hash for metric %s: %v", metric.ID, err)
 	}
 	marshall, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("could not marshall %s: %v", metric.ID, err)
+	}
+	if m.encryptService != nil {
+		marshall, err = m.encryptService.EncryptBytes(marshall)
+		if err != nil {
+			return fmt.Errorf("could not encrypt request %s: %v", metric.ID, err)
+		}
 	}
 
 	r, err := http.NewRequest(http.MethodPost, m.pushURL, bytes.NewReader(marshall))

@@ -6,14 +6,24 @@ import (
 )
 
 type HashService interface {
+	// SetHash Calculates hash for metric
 	SetHash(m *Metrics) error
+	// ValidateHash Returns bool if calculated and metric hash is correct
 	ValidateHash(m *Metrics) error
+}
+
+type EncryptService interface {
+	EncryptBytes(b []byte) ([]byte, error)
+}
+
+type DecryptService interface {
+	DecryptBytes(b []byte) ([]byte, error)
 }
 
 type Repository interface {
 	SaveMetrics([]Metrics) error
 	ReadCurrentState() []Metrics
-	Info() string
+	DebugInfo() string
 	Close() error
 	DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]Metrics, error), duration time.Duration)
 }
