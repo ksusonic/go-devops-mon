@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -27,6 +29,7 @@ type MetricCollector struct {
 	hashService    metrics.HashService
 	encryptService metrics.EncryptService
 	RateLimit      int
+	currentIP      net.IP
 }
 
 func NewMetricCollector(
@@ -49,6 +52,12 @@ func NewMetricCollector(
 	if err != nil {
 		return nil, err
 	}
+	ip, err := getFirstIPOfMachine()
+	if err != nil {
+		return nil, fmt.Errorf("could not get IP of machine: %w", err)
+	} else {
+		logger.Info(fmt.Sprintf("will use IP=%s", ip.String()))
+	}
 
 	return &MetricCollector{
 		Logger:         logger,
@@ -60,6 +69,7 @@ func NewMetricCollector(
 		hashService:    hashService,
 		encryptService: encryptService,
 		RateLimit:      cfg.RateLimit,
+		currentIP:      ip,
 	}, nil
 }
 

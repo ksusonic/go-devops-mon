@@ -17,6 +17,7 @@ import (
 	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/server"
 	"github.com/ksusonic/go-devops-mon/internal/server/middleware"
+	"github.com/ksusonic/go-devops-mon/internal/trust"
 	"go.uber.org/zap"
 )
 
@@ -56,6 +57,13 @@ func main() {
 	if decryptService != nil {
 		logger.Info("using decrypt middleware")
 		router.Use(decryptService.Middleware)
+	}
+	if len(config.TrustedSubnet) > 0 {
+		trustService, err := trust.NewNetTrustService(config.TrustedSubnet, logger.Named("trust"))
+		if err != nil {
+			logger.Fatal("incorrect CIDR subnet from config", zap.String("subnet", config.TrustedSubnet))
+		}
+		router.Use(trustService.Middleware)
 	}
 
 	metricController := controllers.NewMetricController(

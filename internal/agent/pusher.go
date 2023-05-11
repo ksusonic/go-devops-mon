@@ -59,6 +59,7 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 		return fmt.Errorf("error creating request: %v", err)
 	}
 	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("X-Real-IP", m.currentIP.String())
 
 	response, err := m.client.Do(r)
 	if err != nil {
