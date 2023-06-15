@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"sync"
 
 	"go.uber.org/zap"
@@ -46,7 +47,7 @@ func (m MetricCollector) sendMetric(metric metrics.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("could not marshall %s: %v", metric.ID, err)
 	}
-	if m.encryptService != nil {
+	if m.encryptService != nil && !reflect.ValueOf(m.encryptService).IsNil() {
 		marshall, err = m.encryptService.EncryptBytes(marshall)
 		if err != nil {
 			return fmt.Errorf("could not encrypt request %s: %v", metric.ID, err)

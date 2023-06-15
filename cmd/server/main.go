@@ -79,9 +79,11 @@ func main() {
 		}
 		close(idleConnsClosed)
 	}()
-	if err := http.ListenAndServe(config.Address, router); err != http.ErrServerClosed {
-		logger.Fatal("shutdown", zap.Error(err))
-	}
+	go func() {
+		if err := http.ListenAndServe(config.Address, router); err != http.ErrServerClosed {
+			logger.Fatal("shutdown", zap.Error(err))
+		}
+	}()
 	<-idleConnsClosed
 	logger.Info("Server Shutdown gracefully")
 }
