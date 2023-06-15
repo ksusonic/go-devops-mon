@@ -24,16 +24,16 @@ func TestMemStorage_IncPollCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(ctx, metrics.CounterMType, "PollCount")
+			_, err := tt.memStorage.GetMetric(ctx, metrics.CounterType, "PollCount")
 			require.Error(t, err)
 
 			var number int64 = 1
-			tt.memStorage.SetMetric(ctx, metrics.Metrics{
+			tt.memStorage.SetMetric(ctx, &metrics.Metric{
 				ID:    "PollCount",
-				MType: metrics.CounterMType,
+				Type:  metrics.CounterType,
 				Delta: &number,
 			})
-			value, err := tt.memStorage.GetMetric(ctx, metrics.CounterMType, "PollCount")
+			value, err := tt.memStorage.GetMetric(ctx, metrics.CounterType, "PollCount")
 			require.NoError(t, err)
 			require.NotNil(t, value, "value from storage is nil")
 			var expected int64 = 1
@@ -50,40 +50,40 @@ func TestMemStorage_SetMetric_GetMetric(t *testing.T) {
 	tests := []struct {
 		name       string
 		memStorage *MemStorage
-		args       metrics.Metrics
+		args       metrics.Metric
 	}{
 		{
 			name:       "simple test #1",
 			memStorage: NewMemStorage(),
-			args: metrics.Metrics{
+			args: metrics.Metric{
 				ID:    "PauseTotalNs",
-				MType: metrics.GaugeMType,
+				Type:  metrics.GaugeType,
 				Value: &value,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.memStorage.GetMetric(ctx, tt.args.MType, tt.args.ID)
+			_, err := tt.memStorage.GetMetric(ctx, tt.args.Type, tt.args.ID)
 			require.Error(t, err)
 
-			tt.memStorage.SetMetric(ctx, tt.args)
-			result, err := tt.memStorage.GetMetric(ctx, tt.args.MType, tt.args.ID)
+			tt.memStorage.SetMetric(ctx, &tt.args)
+			result, err := tt.memStorage.GetMetric(ctx, tt.args.Type, tt.args.ID)
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			assert.Equal(t, tt.args, result)
+			assert.Equal(t, tt.args, *result)
 		})
 	}
 }
 
 func BenchmarkMemStorage(b *testing.B) {
-	GenerateMetricPool := func(size int) []metrics.Metrics {
-		var metricPool = make([]metrics.Metrics, size)
+	GenerateMetricPool := func(size int) []*metrics.Metric {
+		var metricPool = make([]*metrics.Metric, size)
 		for i := 0; i < size; i++ {
 			value := rand.Float64()
-			metricPool[i] = metrics.Metrics{
+			metricPool[i] = &metrics.Metric{
 				ID:    "metric" + string(rune(rand.Intn(3))),
-				MType: metrics.GaugeMType,
+				Type:  metrics.GaugeType,
 				Value: &value,
 			}
 		}
@@ -99,7 +99,7 @@ func BenchmarkMemStorage(b *testing.B) {
 			metricPool := GenerateMetricPool(defaultPoolSize)
 			b.StartTimer()
 
-			err := memStorage.SetMetrics(context.Background(), &metricPool)
+			err := memStorage.SetMetrics(context.Background(), metricPool)
 			if err != nil {
 				b.Error(err)
 			}
@@ -126,7 +126,7 @@ func BenchmarkMemStorage(b *testing.B) {
 			b.StartTimer()
 
 			metric := &metricPool[0]
-			_, err := memStorage.GetMetric(context.Background(), metric.MType, metric.ID)
+			_, err := memStorage.GetMetric(context.Background(), (*metric).Type, (*metric).ID)
 			if err != nil {
 				b.Error(err)
 			}

@@ -17,12 +17,12 @@ func NewAgentStorage() *AgentStorage {
 	}
 }
 
-func (m *AgentStorage) SetMetric(metric metrics.Metrics) error {
+func (m *AgentStorage) SetMetric(metric metrics.Metric) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	if metric.MType == metrics.CounterMType {
+	if metric.Type == metrics.CounterType {
 		var lastValue int64 = 0
-		if found := m.typeToNameMapping.getMetric(metric); found != nil {
+		if found := m.typeToNameMapping.getMetric(metric.ID, metric.Type); found != nil {
 			lastValue = *found.Delta
 		}
 		value := lastValue + *metric.Delta
@@ -34,10 +34,10 @@ func (m *AgentStorage) SetMetric(metric metrics.Metrics) error {
 	return nil
 }
 
-func (m *AgentStorage) GetAllMetrics() []metrics.Metrics {
+func (m *AgentStorage) GetAllMetrics() []metrics.Metric {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
-	var result []metrics.Metrics
+	var result []metrics.Metric
 	for _, t := range m.typeToNameMapping {
 		for _, m := range t {
 			result = append(result, m)

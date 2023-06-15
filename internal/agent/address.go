@@ -32,7 +32,7 @@ func getCurrentIps() ([]net.IP, error) {
 	return currentIps, nil
 }
 
-func getFirstIPOfMachine() (net.IP, error) {
+func GetFirstIPOfMachine() (net.IP, error) {
 	addresses, err := getCurrentIps()
 	if err != nil {
 		return nil, err

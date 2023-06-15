@@ -3,13 +3,22 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type MemStorage struct {
 	typeToNameMapping TypeToNameToMetric
-	repository        metrics.Repository
+	repository        Repository
+}
+
+type Repository interface {
+	SaveMetrics([]metrics.Metric) error
+	ReadCurrentState() []metrics.Metric
+	DebugInfo() string
+	Close() error
+	DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]metrics.Metric, error), duration time.Duration)
 }
 
 func (m *MemStorage) Ping(context.Context) error {
@@ -30,23 +39,23 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (m *MemStorage) SetMetric(_ context.Context, metric metrics.Metrics) (metrics.Metrics, error) {
-	if metric.MType == metrics.CounterMType {
+func (m *MemStorage) SetMetric(_ context.Context, metric *metrics.Metric) (*metrics.Metric, error) {
+	if metric.Type == metrics.CounterType {
 		var lastValue int64 = 0
-		if found := m.typeToNameMapping.getMetric(metric); found != nil {
+		if found := m.typeToNameMapping.getMetric(metric.ID, metric.Type); found != nil {
 			lastValue = *found.Delta
 		}
 		value := lastValue + *metric.Delta
 		metric.Delta = &value
 	}
 
-	m.typeToNameMapping.safeInsert(metric)
+	m.typeToNameMapping.safeInsert(*metric)
 
 	return metric, nil
 }
 
-func (m *MemStorage) SetMetrics(ctx context.Context, metrics *[]metrics.Metrics) error {
-	for _, metric := range *metrics {
+func (m *MemStorage) SetMetrics(ctx context.Context, metrics []*metrics.Metric) error {
+	for _, metric := range metrics {
 		_, err := m.SetMetric(ctx, metric)
 		if err != nil {
 			return err
@@ -55,19 +64,16 @@ func (m *MemStorage) SetMetrics(ctx context.Context, metrics *[]metrics.Metrics)
 	return nil
 }
 
-func (m *MemStorage) GetMetric(_ context.Context, type_, name string) (metrics.Metrics, error) {
-	metric := m.typeToNameMapping.getMetric(metrics.Metrics{
-		ID:    name,
-		MType: type_,
-	})
+func (m *MemStorage) GetMetric(_ context.Context, type_, name string) (*metrics.Metric, error) {
+	metric := m.typeToNameMapping.getMetric(name, type_)
 	if metric == nil {
-		return metrics.Metrics{}, fmt.Errorf("metric %s of type %s not found", name, type_)
+		return nil, fmt.Errorf("metric %s of type %s not found", name, type_)
 	}
-	return *metric, nil
+	return metric, nil
 }
 
-func (m *MemStorage) GetAllMetrics(context.Context) ([]metrics.Metrics, error) {
-	var result []metrics.Metrics
+func (m *MemStorage) GetAllMetrics(context.Context) ([]metrics.Metric, error) {
+	var result []metrics.Metric
 	for _, t := range m.typeToNameMapping {
 		for _, m := range t {
 			result = append(result, m)
@@ -76,40 +82,40 @@ func (m *MemStorage) GetAllMetrics(context.Context) ([]metrics.Metrics, error) {
 	return result, nil
 }
 
-func (m *MemStorage) GetMappedByTypeAndNameMetrics(context.Context) (map[string]map[string]interface{}, error) {
+func (m *MemStorage) GetMappedByTypeAndNameMetrics(_ context.Context) (map[string]map[string]interface{}, error) {
 	res := make(map[string]map[string]interface{})
 	for _, t := range m.typeToNameMapping {
 		for _, m := range t {
-			_, ok := res[m.MType]
+			_, ok := res[m.Type]
 			if !ok {
-				res[m.MType] = make(map[string]interface{})
+				res[m.Type] = make(map[string]interface{})
 			}
-			if m.MType == metrics.GaugeMType {
-				res[m.MType][m.ID] = *m.Value
-			} else if m.MType == metrics.CounterMType {
-				res[m.MType][m.ID] = *m.Delta
+			if m.Type == metrics.GaugeType {
+				res[m.Type][m.ID] = *m.Value
+			} else if m.Type == metrics.CounterType {
+				res[m.Type][m.ID] = *m.Delta
 			}
 		}
 	}
 	return res, nil
 }
 
-type TypeToNameToMetric map[string]map[string]metrics.Metrics
+type TypeToNameToMetric map[string]map[string]metrics.Metric
 
-func (t *TypeToNameToMetric) safeInsert(m metrics.Metrics) {
-	_, ok := (*t)[m.MType]
+func (t *TypeToNameToMetric) safeInsert(m metrics.Metric) {
+	_, ok := (*t)[m.Type]
 	if !ok {
-		(*t)[m.MType] = make(map[string]metrics.Metrics)
+		(*t)[m.Type] = make(map[string]metrics.Metric)
 	}
-	(*t)[m.MType][m.ID] = m
+	(*t)[m.Type][m.ID] = m
 }
 
-func (t *TypeToNameToMetric) getMetric(m metrics.Metrics) *metrics.Metrics {
-	_, ok := (*t)[m.MType]
+func (t *TypeToNameToMetric) getMetric(id, mtype string) *metrics.Metric {
+	_, ok := (*t)[mtype]
 	if !ok {
 		return nil
 	}
-	metric, ok := (*t)[m.MType][m.ID]
+	metric, ok := (*t)[mtype][id]
 	if !ok {
 		return nil
 	}

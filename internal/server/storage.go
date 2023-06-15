@@ -31,7 +31,7 @@ func NewStorage(config *Config, logger *zap.Logger) (metrics.ServerMetricStorage
 			}
 			if config.RestoreFile {
 				restoredMetrics := repository.ReadCurrentState()
-				if err := memStorage.SetMetrics(context.Background(), &restoredMetrics); err != nil {
+				if err := memStorage.SetMetrics(context.Background(), restoredMetrics); err != nil {
 					return nil, fmt.Errorf("error setting current metrics from repository: %v", err)
 				}
 				logger.Info("Restored metrics", zap.Int("amount", len(restoredMetrics)))

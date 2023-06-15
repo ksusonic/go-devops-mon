@@ -1,49 +1,61 @@
 package agent
 
 import (
-	"fmt"
 	"math/rand"
 	"net"
-	"net/http"
-	"net/url"
 	"runtime"
+	"sync"
 	"time"
 
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
-
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
 
 	"go.uber.org/zap"
 )
 
 var pollCounterDelta int64 = 1
 
+type EncryptService interface {
+	EncryptBytes(b []byte) ([]byte, error)
+}
+
+type Storage interface {
+	// SetMetric Set value to metric
+	SetMetric(m metrics.Metric) error
+	// GetAllMetrics Get all metrics as slice
+	GetAllMetrics() []metrics.Metric
+}
+
+type HashService interface {
+	// SetHash Calculates hash for metric
+	SetHash(m *metrics.Metric) error
+}
+
+type Pusher interface {
+	SendMetric(metric *metrics.Metric) error
+}
+
 type MetricCollector struct {
 	Logger         *zap.Logger
-	Storage        metrics.AgentMetricStorage
+	Storage        Storage
 	CollectChan    <-chan time.Time
 	PushChan       <-chan time.Time
-	pushURL        string
-	client         http.Client
-	hashService    metrics.HashService
-	encryptService metrics.EncryptService
+	hashService    HashService
+	encryptService EncryptService
 	RateLimit      int
 	currentIP      net.IP
+	metricPusher   Pusher
 }
 
 func NewMetricCollector(
 	cfg *Config,
 	logger *zap.Logger,
-	storage metrics.AgentMetricStorage,
-	hashService metrics.HashService,
-	encryptService metrics.EncryptService,
+	storage Storage,
+	hashService HashService,
+	encryptService EncryptService,
+	metricsPusher Pusher,
 ) (*MetricCollector, error) {
-	u := url.URL{
-		Scheme: cfg.AddressScheme,
-		Host:   cfg.Address,
-		Path:   "/update/",
-	}
 	pollInterval, err := time.ParseDuration(cfg.PollInterval)
 	if err != nil {
 		return nil, err
@@ -52,24 +64,16 @@ func NewMetricCollector(
 	if err != nil {
 		return nil, err
 	}
-	ip, err := getFirstIPOfMachine()
-	if err != nil {
-		return nil, fmt.Errorf("could not get IP of machine: %w", err)
-	} else {
-		logger.Info(fmt.Sprintf("will use IP=%s", ip.String()))
-	}
 
 	return &MetricCollector{
 		Logger:         logger,
 		Storage:        storage,
 		CollectChan:    time.NewTicker(pollInterval).C,
 		PushChan:       time.NewTicker(reportInterval).C,
-		pushURL:        u.String(),
-		client:         http.Client{},
 		hashService:    hashService,
 		encryptService: encryptService,
 		RateLimit:      cfg.RateLimit,
-		currentIP:      ip,
+		metricPusher:   metricsPusher,
 	}, nil
 }
 
@@ -197,9 +201,9 @@ func (m MetricCollector) CollectStat() {
 
 	// gauge
 	for i := range currentGaugeMetrics {
-		err := m.Storage.SetMetric(metrics.Metrics{
+		err := m.Storage.SetMetric(metrics.Metric{
 			ID:    currentGaugeMetrics[i].Name,
-			MType: metrics.GaugeMType,
+			Type:  metrics.GaugeType,
 			Value: &currentGaugeMetrics[i].Value,
 		})
 		if err != nil {
@@ -208,9 +212,9 @@ func (m MetricCollector) CollectStat() {
 	}
 
 	// counters
-	err := m.Storage.SetMetric(metrics.Metrics{
+	err := m.Storage.SetMetric(metrics.Metric{
 		ID:    "PollCount",
-		MType: metrics.CounterMType,
+		Type:  metrics.CounterType,
 		Delta: &pollCounterDelta,
 	})
 	if err != nil {
@@ -251,13 +255,41 @@ func (m MetricCollector) CollectPsUtil() {
 			value: cpuAvg,
 		},
 	} {
-		err := m.Storage.SetMetric(metrics.Metrics{
+		err := m.Storage.SetMetric(metrics.Metric{
 			ID:    metric.name,
-			MType: metrics.GaugeMType,
+			Type:  metrics.GaugeType,
 			Value: &metric.value,
 		})
 		if err != nil {
 			m.Logger.Error("failed to add metric", zap.String("id", metric.name), zap.Error(err))
 		}
 	}
+}
+
+func (m MetricCollector) PushMetrics() {
+	metricCh := make(chan *metrics.Metric)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < m.RateLimit; i++ {
+		go func() {
+			for metric := range metricCh {
+				err := m.hashService.SetHash(metric)
+				if err != nil {
+					m.Logger.Error("could not set hash for metric", zap.String("ID", metric.GetID()), zap.Error(err))
+				}
+				err = m.metricPusher.SendMetric(metric)
+				if err != nil {
+					m.Logger.Error("error pushing metric", zap.Error(err))
+				}
+				wg.Done()
+			}
+		}()
+	}
+
+	allMetrics := m.Storage.GetAllMetrics()
+	for i := range allMetrics {
+		wg.Add(1)
+		metricCh <- &allMetrics[i]
+	}
+	wg.Wait()
 }

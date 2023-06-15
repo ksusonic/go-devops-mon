@@ -1,0 +1,54 @@
+syntax = "proto3";
+package server;
+
+option go_package = "github.com/ksusonic/go-devops-mon/proto";
+
+import "proto/metrics/metric.proto";
+
+service Server {
+  rpc UpdateMetric(UpdateMetricRequest) returns (UpdateMetricResponse);
+  rpc MetricUpdates(MetricUpdatesRequest) returns (MetricUpdatesResponse);
+
+  rpc GetValue(GetValueRequest) returns (GetValueResponse);
+  rpc GetAllMetrics(GetAllMetricsRequest) returns (GetAllMetricsResponse);
+}
+
+message UpdateMetricRequest {
+  metrics.Metric Metric = 1;
+}
+
+message UpdateMetricResponse {
+  metrics.Metric Metric = 1;
+}
+
+message MetricUpdatesRequest {
+  repeated metrics.Metric Metrics = 1;
+}
+
+message MetricUpdatesResponse {
+}
+
+message GetValueRequest {
+  string ID = 1;
+  metrics.MetricType Type = 2;
+}
+
+message GetValueResponse {
+  oneof Response {
+    metrics.Metric Metric = 1;
+    string Error = 2;
+  }
+}
+
+message GetAllMetricsRequest {
+}
+
+message GetAllMetricsResponse {
+  message IdToMetric {
+    map<string, metrics.Metric> Value = 1;
+  }
+
+  map<string, IdToMetric> Mapping = 1;
+}
+
+

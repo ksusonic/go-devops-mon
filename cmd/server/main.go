@@ -38,6 +38,9 @@ func main() {
 	logger, _ := getLogger(config.Debug)
 
 	router := chi.NewRouter()
+	router.Use(chiMiddleware.Logger)
+	router.Use(middleware.GzipEncoder)
+
 	if config.Debug {
 		router.Mount("/debug", chiMiddleware.Profiler())
 	}
@@ -53,7 +56,7 @@ func main() {
 	if config.CryptoKeyPath != "" && err != nil {
 		logger.Fatal("error creating decrypter", zap.Error(err))
 	}
-	router.Use(middleware.GzipEncoder)
+
 	if decryptService != nil {
 		logger.Info("using decrypt middleware")
 		router.Use(decryptService.Middleware)
@@ -74,24 +77,31 @@ func main() {
 	router.Mount("/", metricController.Router())
 
 	var srv = http.Server{Addr: config.Address, Handler: router}
-	logger.Info("Server started!", zap.String("address", config.Address))
+	var grpcSrv = server.NewServer(metricsStorage, hashService, logger)
 
 	idleConnsClosed := make(chan struct{})
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-	go func() {
+	go func() { // graceful shutdown watcher
 		<-sigint
+
+		grpcSrv.GrpcServer.GracefulStop()
 		if err := srv.Shutdown(context.Background()); err != nil {
 			logger.Info("HTTP server Shutdown", zap.Error(err))
 		}
 		close(idleConnsClosed)
 	}()
+
+	go grpcSrv.Start(3000)
 	go func() {
+		logger.Info("Listening http", zap.String("address", config.Address))
 		if err := http.ListenAndServe(config.Address, router); err != http.ErrServerClosed {
 			logger.Fatal("shutdown", zap.Error(err))
 		}
+		logger.Info("http server down")
 	}()
+
 	<-idleConnsClosed
 	logger.Info("Server Shutdown gracefully")
 }

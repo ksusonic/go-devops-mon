@@ -7,9 +7,8 @@ import (
 	"os"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	"go.uber.org/zap"
 )
 
 type FileRepository struct {
@@ -26,7 +25,7 @@ func NewFileRepository(filename string, logger *zap.Logger) (*FileRepository, er
 	return &FileRepository{file: file, logger: logger}, nil
 }
 
-func (p *FileRepository) DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]metrics.Metrics, error), duration time.Duration) {
+func (p *FileRepository) DropRoutine(ctx context.Context, getMetricsFunc func(context.Context) ([]metrics.Metric, error), duration time.Duration) {
 	p.logger.Info("Started repository drop routine ", zap.String("destination", p.DebugInfo()), zap.Duration("drop-duration", duration))
 
 	ticker := time.NewTicker(duration)
@@ -50,23 +49,23 @@ func (p *FileRepository) DropRoutine(ctx context.Context, getMetricsFunc func(co
 	}
 }
 
-func (p *FileRepository) ReadCurrentState() []metrics.Metrics {
-	var result []metrics.Metrics
+func (p *FileRepository) ReadCurrentState() []*metrics.Metric {
+	var result []*metrics.Metric
 
 	scanner := bufio.NewScanner(p.file)
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		var metric metrics.Metrics
+		var metric metrics.Metric
 		err := json.Unmarshal(data, &metric)
 		if err == nil {
-			result = append(result, metric)
+			result = append(result, &metric)
 		}
 		// ignore incorrect metric records
 	}
 	return result
 }
 
-func (p *FileRepository) SaveMetrics(metrics []metrics.Metrics) error {
+func (p *FileRepository) SaveMetrics(metrics []metrics.Metric) error {
 	// clear old metrics
 	err := p.file.Truncate(0)
 	if err != nil {
