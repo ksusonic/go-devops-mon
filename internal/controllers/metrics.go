@@ -239,4 +239,10 @@ func (c *Controller) UpdatesMetricHandler(w http.ResponseWriter, r *http.Request
 		c.Logger.Error("error setting metric", zap.Error(err))
 		render.Render(w, r, ErrInternalError(err, c.Logger))
 	}
+	w.Header().Set("Content-Type", "application/json")
+	marshall, _ := json.Marshal(metricSlice)
+	_, err = w.Write(marshall)
+	if err != nil {
+		c.Logger.Error("error marshalling status", zap.Error(err))
+	}
 }
