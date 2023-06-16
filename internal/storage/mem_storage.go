@@ -41,12 +41,9 @@ func NewMemStorage() *MemStorage {
 
 func (m *MemStorage) SetMetric(_ context.Context, metric *metrics.Metric) (*metrics.Metric, error) {
 	if metric.Type == metrics.CounterType {
-		var lastValue int64 = 0
 		if found := m.typeToNameMapping.getMetric(metric.ID, metric.Type); found != nil {
-			lastValue = *found.Delta
+			*metric.Delta += *found.Delta
 		}
-		value := lastValue + *metric.Delta
-		metric.Delta = &value
 	}
 
 	m.typeToNameMapping.safeInsert(*metric)
