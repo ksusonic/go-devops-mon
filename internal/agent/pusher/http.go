@@ -2,6 +2,7 @@ package pusher
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +24,11 @@ type EncryptService interface {
 	EncryptBytes(b []byte) ([]byte, error)
 }
 
-func (h *HTTPPusher) SendMetric(metric *metrics.Metric) error {
+func (h *HTTPPusher) Connect() (func(), error) {
+	return func() {}, nil
+}
+
+func (h *HTTPPusher) SendMetric(_ context.Context, metric *metrics.Metric) error {
 	marshall, err := json.Marshal(metric)
 	if err != nil {
 		return fmt.Errorf("could not marshall %s: %v", metric.ID, err)

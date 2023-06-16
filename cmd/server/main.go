@@ -93,7 +93,7 @@ func main() {
 		close(idleConnsClosed)
 	}()
 
-	go grpcSrv.Start(3000)
+	go grpcSrv.Start(3200)
 	go func() {
 		logger.Info("Listening http", zap.String("address", config.Address))
 		if err := http.ListenAndServe(config.Address, router); err != http.ErrServerClosed {

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"math/rand"
 	"net"
 	"runtime"
@@ -33,9 +34,9 @@ type HashService interface {
 }
 
 type Pusher interface {
-	SendMetric(metric *metrics.Metric) error
+	SendMetric(ctx context.Context, metric *metrics.Metric) error
+	Connect() (func(), error) // func to disconnect or error
 }
-
 type MetricCollector struct {
 	Logger         *zap.Logger
 	Storage        Storage
@@ -270,6 +271,14 @@ func (m MetricCollector) PushMetrics() {
 	metricCh := make(chan *metrics.Metric)
 	wg := sync.WaitGroup{}
 
+	disconnect, err := m.metricPusher.Connect()
+	if err != nil {
+		m.Logger.Fatal("could not connect to grpc", zap.Error(err))
+	}
+	defer disconnect()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
 	for i := 0; i < m.RateLimit; i++ {
 		go func() {
 			for metric := range metricCh {
@@ -277,7 +286,7 @@ func (m MetricCollector) PushMetrics() {
 				if err != nil {
 					m.Logger.Error("could not set hash for metric", zap.String("ID", metric.GetID()), zap.Error(err))
 				}
-				err = m.metricPusher.SendMetric(metric)
+				err = m.metricPusher.SendMetric(ctx, metric)
 				if err != nil {
 					m.Logger.Error("error pushing metric", zap.Error(err))
 				}
