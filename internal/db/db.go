@@ -55,7 +55,7 @@ func (d DB) SetMetric(ctx context.Context, m *metrics.Metric) (_ *metrics.Metric
 	case metrics.CounterType:
 		current, err := d.GetMetric(ctx, m.Type, m.ID)
 		if err == nil {
-			m.Delta = current.Delta
+			*m.Delta += *current.Delta
 		}
 		_, err = d.db.ExecContext(ctx,
 			`INSERT INTO metrics
@@ -64,7 +64,7 @@ func (d DB) SetMetric(ctx context.Context, m *metrics.Metric) (_ *metrics.Metric
 			ON CONFLICT(id, type) DO UPDATE SET delta=$3`,
 			m.ID,
 			m.Type,
-			m.GetDelta(),
+			*m.Delta,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error in SetMetric: %v", err)
@@ -78,7 +78,7 @@ func (d DB) SetMetric(ctx context.Context, m *metrics.Metric) (_ *metrics.Metric
 			ON CONFLICT(id, type) DO UPDATE SET value=$3`,
 			m.ID,
 			m.Type,
-			m.GetValue(),
+			*m.Value,
 		)
 	default:
 		return nil, fmt.Errorf("unknown metric type for db-insertion: %s", m.Type)
@@ -115,15 +115,15 @@ func (d DB) SetMetrics(ctx context.Context, m []*metrics.Metric) error {
 	for _, metric := range m {
 		switch metric.Type {
 		case metrics.GaugeType:
-			_, err = gaugeStmt.ExecContext(ctx, metric.ID, metric.GetValue())
+			_, err = gaugeStmt.ExecContext(ctx, metric.ID, *metric.Value)
 		case metrics.CounterType:
 			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;", metric.Type, metric.ID)
 			currentMetric, err2 := rowToMetric(metricRow)
 			if err2 == nil {
 				// plus current delta
-				metric.Delta = currentMetric.Delta
+				*metric.Delta += *currentMetric.Delta
 			}
-			_, err = counterStmt.ExecContext(ctx, metric.ID, metric.GetDelta())
+			_, err = counterStmt.ExecContext(ctx, metric.ID, *metric.Delta)
 		default:
 			err = fmt.Errorf("unknown metric type: %s", metric.Type)
 		}
@@ -217,9 +217,9 @@ func (d DB) GetMappedByTypeAndNameMetrics(ctx context.Context) (map[string]map[s
 			res[m.Type] = make(map[string]interface{})
 		}
 		if m.Type == metrics.GaugeType {
-			res[m.Type][m.ID] = m.GetValue()
+			res[m.Type][m.ID] = *m.Value
 		} else if m.Type == metrics.CounterType {
-			res[m.Type][m.ID] = m.GetDelta()
+			res[m.Type][m.ID] = *m.Delta
 		}
 	}
 	return res, nil
