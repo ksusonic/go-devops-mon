@@ -18,6 +18,7 @@ type Config struct {
 	SecretKey      string `json:"key" env:"KEY"`
 	RateLimit      int    `json:"rate_limit" env:"RATE_LIMIT"`
 	CryptoKeyPath  string `json:"crypto_key" env:"CRYPTO_KEY"`
+	UseGrpc        bool   `json:"use_grpc" env:"USE_GRPC"`
 }
 
 func NewConfig() (*Config, error) {
@@ -41,6 +42,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 	flag.IntVar(&cfg.RateLimit, "l", 1, "rate limit for sending metrics")
 	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "", "public key for https requests")
+	flag.BoolVar(&cfg.UseGrpc, "grpc", false, "use grpc protocol")
 
 	flag.Parse()
 

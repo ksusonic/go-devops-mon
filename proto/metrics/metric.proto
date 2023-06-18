@@ -1,0 +1,20 @@
+syntax = "proto3";
+package metrics;
+
+option go_package = "github.com/ksusonic/go-devops-mon/proto/metrics";
+
+enum MetricType {
+  unknown = 0;
+  gauge = 1;
+  counter = 2;
+}
+
+message Metric {
+  string ID = 1;
+  MetricType Type = 2;
+  oneof Payload {
+    int64 Delta = 3;
+    double Value = 4;
+  }
+  string Hash = 5;
+}

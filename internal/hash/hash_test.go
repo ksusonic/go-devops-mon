@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	metricspb "github.com/ksusonic/go-devops-mon/proto/metrics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ var (
 func TestService_SetHash(t *testing.T) {
 
 	type args struct {
-		m *metrics.Metrics
+		m *metricspb.Metric
 	}
 	tests := []struct {
 		name    string
@@ -27,10 +27,10 @@ func TestService_SetHash(t *testing.T) {
 		{
 			name: "test gauge",
 			args: args{
-				m: &metrics.Metrics{
-					ID:    "some-gauge-metric",
-					MType: metrics.GaugeMType,
-					Value: &gaugeValue,
+				m: &metricspb.Metric{
+					ID:      "some-gauge-metric",
+					Type:    metricspb.MetricType_gauge,
+					Payload: &metricspb.Metric_Value{Value: gaugeValue},
 				},
 			},
 			wantErr: false,
@@ -38,19 +38,18 @@ func TestService_SetHash(t *testing.T) {
 		{
 			name: "test counter",
 			args: args{
-				m: &metrics.Metrics{
-					ID:    "some-counter-metric",
-					MType: metrics.CounterMType,
-					Delta: &counterValue,
+				m: &metricspb.Metric{
+					ID:      "some-counter-metric",
+					Type:    metricspb.MetricType_counter,
+					Payload: &metricspb.Metric_Delta{Delta: counterValue},
 				},
 			},
 			wantErr: false,
 		},
 		{
 			args: args{
-				m: &metrics.Metrics{
-					ID:    "some-invalid",
-					MType: "none",
+				m: &metricspb.Metric{
+					ID: "some-invalid",
 				},
 			},
 			wantErr: true,
@@ -60,8 +59,8 @@ func TestService_SetHash(t *testing.T) {
 	s := Service{&HashKey}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := s.SetHash(tt.args.m); (err != nil) != tt.wantErr {
-				t.Errorf("SetHash() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.SetHashProto(tt.args.m); (err != nil) != tt.wantErr {
+				t.Errorf("SetHashProto() error = %v, wantErr %v", err, tt.wantErr)
 				assert.NotEmpty(t, tt.args.m.Hash, "calculated hash is empty")
 			}
 		})
@@ -70,20 +69,26 @@ func TestService_SetHash(t *testing.T) {
 
 func ExampleService_SetHash() {
 	s := Service{&HashKey}
-	metric1 := &metrics.Metrics{
-		ID:    "some-gauge-metric",
-		MType: metrics.GaugeMType,
-		Value: &gaugeValue,
+	metric1 := &metricspb.Metric{
+		ID:      "some-gauge-metric",
+		Type:    metricspb.MetricType_gauge,
+		Payload: &metricspb.Metric_Value{Value: gaugeValue},
 	}
-	s.SetHash(metric1)
+	err := s.SetHashProto(metric1)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(metric1.Hash)
 
-	metric2 := &metrics.Metrics{
-		ID:    "some-counter-metric",
-		MType: metrics.CounterMType,
-		Delta: &counterValue,
+	metric2 := &metricspb.Metric{
+		ID:      "some-counter-metric",
+		Type:    metricspb.MetricType_counter,
+		Payload: &metricspb.Metric_Delta{Delta: counterValue},
 	}
-	s.SetHash(metric2)
+	err = s.SetHashProto(metric2)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(metric2.Hash)
 
 	// Output:

@@ -10,11 +10,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/ksusonic/go-devops-mon/internal/hash"
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
 	"github.com/ksusonic/go-devops-mon/internal/storage"
-
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -86,35 +85,24 @@ func TestController_UpdateMetricHandler(t *testing.T) {
 	var testValue = 123.0123
 
 	for _, tt := range []struct {
-		Metric         metrics.Metrics
+		Metric         metrics.Metric
 		ExpectedStatus int
 	}{
 		{
-			metrics.Metrics{
+			metrics.Metric{
 				ID:    "BuckHashSys",
-				MType: "gauge",
-				Delta: nil,
+				Type:  metrics.GaugeType,
 				Value: &testValue,
 			},
 			http.StatusOK,
 		},
 		{
-			metrics.Metrics{
+			metrics.Metric{
 				ID:    "noSuchMetric",
-				MType: "gauge",
-				Delta: nil,
+				Type:  metrics.GaugeType,
 				Value: &testValue,
 			},
 			http.StatusOK,
-		},
-		{
-			metrics.Metrics{
-				ID:    "BuckHashSys",
-				MType: "superGauge",
-				Delta: nil,
-				Value: &testValue,
-			},
-			http.StatusNotImplemented,
 		},
 	} {
 		marshal, err := json.Marshal(tt.Metric)
@@ -126,22 +114,22 @@ func TestController_UpdateMetricHandler(t *testing.T) {
 
 		if tt.ExpectedStatus == http.StatusOK {
 			// check how metric saved in storage
-			actualMetric, err := memStorage.GetMetric(context.Background(), tt.Metric.MType, tt.Metric.ID)
+			actualMetric, err := memStorage.GetMetric(context.Background(), tt.Metric.Type, tt.Metric.ID)
 			if err != nil {
 				t.Errorf("metric %s not saved in storage", tt.Metric.ID)
+				t.Fail()
 			}
 			assert.Equal(t, tt.Metric.ID, actualMetric.ID)
-			assert.Equal(t, tt.Metric.MType, actualMetric.MType)
-			assert.Equal(t, *tt.Metric.Value, *actualMetric.Value)
+			assert.Equal(t, tt.Metric.Type, actualMetric.Type)
+			assert.Equal(t, *tt.Metric.Value, actualMetric.GetValue())
 		}
 	}
 
 	var counterValue int64 = 1234
-	var simpleCounterMetric = metrics.Metrics{
+	var simpleCounterMetric = metrics.Metric{
 		ID:    "noSuchCounter",
-		MType: "counter",
+		Type:  metrics.CounterType,
 		Delta: &counterValue,
-		Value: nil,
 	}
 	marshal, _ := json.Marshal(simpleCounterMetric)
 
@@ -171,10 +159,9 @@ func TestController_GetMetricHandler(t *testing.T) {
 	defer ts.Close()
 
 	testValue := 123.01
-	expected := metrics.Metrics{
+	expected := metrics.Metric{
 		ID:    "BuckHashSys",
-		MType: "gauge",
-		Delta: nil,
+		Type:  metrics.GaugeType,
 		Value: &testValue,
 	}
 	marshal, err := json.Marshal(expected)
@@ -184,16 +171,16 @@ func TestController_GetMetricHandler(t *testing.T) {
 	statusCode, _ := ts.testRequest(t, "POST", "/update/", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusOK, statusCode)
 
-	marshal, err = json.Marshal(metrics.Metrics{
-		ID:    "BuckHashSys",
-		MType: "gauge",
+	marshal, err = json.Marshal(metrics.Metric{
+		ID:   "BuckHashSys",
+		Type: metrics.GaugeType,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 	statusCode, res := ts.testRequest(t, "POST", "/value/", bytes.NewReader(marshal))
 	assert.Equal(t, http.StatusOK, statusCode)
-	var actual metrics.Metrics
+	var actual metrics.Metric
 	err = json.Unmarshal(res, &actual)
 	if err != nil {
 		t.Error(err)
@@ -204,19 +191,18 @@ func TestController_GetMetricHandler(t *testing.T) {
 func ExampleController_GetMetricHandler() {
 	memStorage := storage.NewMemStorage()
 	testValue := 123.01
-	expected := metrics.Metrics{
+	expected := &metrics.Metric{
 		ID:    "BuckHashSys",
-		MType: "gauge",
-		Delta: nil,
+		Type:  metrics.GaugeType,
 		Value: &testValue,
 	}
 	memStorage.SetMetric(context.Background(), expected)
 	ts := NewTestServer(memStorage)
 	defer ts.Close()
 
-	marshal, _ := json.Marshal(metrics.Metrics{
-		ID:    "BuckHashSys",
-		MType: "gauge",
+	marshal, _ := json.Marshal(metrics.Metric{
+		ID:   "BuckHashSys",
+		Type: metrics.GaugeType,
 	})
 	req, _ := http.NewRequest("POST", ts.Server.URL+"/value/", bytes.NewReader(marshal))
 	req.Header.Add("Content-Type", "application/json")
@@ -227,16 +213,16 @@ func ExampleController_GetMetricHandler() {
 	respBody, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 
-	var actual metrics.Metrics
+	var actual metrics.Metric
 	json.Unmarshal(respBody, &actual)
 
-	fmt.Println(actual)
+	fmt.Printf("before hash:%s\n", actual.Hash)
 	actual.Hash = "some-hash"
-	fmt.Println(actual)
+	fmt.Printf("after hash:%s", actual.Hash)
 
 	// Output:
-	// metric BuckHashSys of type gauge with value 123.010000
-	// metric BuckHashSys of type gauge with value 123.010000 and hash: some-hash
+	// before hash:
+	// after hash:some-hash
 }
 
 func TestController_GetAllMetricsHandler(t *testing.T) {

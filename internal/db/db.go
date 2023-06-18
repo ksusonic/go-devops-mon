@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
-
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
 )
 
 type DB struct {
@@ -51,10 +50,10 @@ func (d DB) Close() error {
 	return d.db.Close()
 }
 
-func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics, err error) {
-	switch m.MType {
-	case metrics.CounterMType:
-		current, err := d.GetMetric(ctx, m.MType, m.ID)
+func (d DB) SetMetric(ctx context.Context, m *metrics.Metric) (_ *metrics.Metric, err error) {
+	switch m.Type {
+	case metrics.CounterType:
+		current, err := d.GetMetric(ctx, m.Type, m.ID)
 		if err == nil {
 			*m.Delta += *current.Delta
 		}
@@ -64,13 +63,13 @@ func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics
 			VALUES ($1, $2, $3)
 			ON CONFLICT(id, type) DO UPDATE SET delta=$3`,
 			m.ID,
-			m.MType,
+			m.Type,
 			*m.Delta,
 		)
 		if err != nil {
-			return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
+			return nil, fmt.Errorf("error in SetMetric: %v", err)
 		}
-	case metrics.GaugeMType:
+	case metrics.GaugeType:
 		_, err = d.db.ExecContext(
 			ctx,
 			`INSERT INTO metrics
@@ -78,25 +77,25 @@ func (d DB) SetMetric(ctx context.Context, m metrics.Metrics) (_ metrics.Metrics
 			VALUES ($1, $2, $3)
 			ON CONFLICT(id, type) DO UPDATE SET value=$3`,
 			m.ID,
-			m.MType,
+			m.Type,
 			*m.Value,
 		)
 	default:
-		return metrics.Metrics{}, fmt.Errorf("unknown metric type for db-insertion: %s", m.MType)
+		return nil, fmt.Errorf("unknown metric type for db-insertion: %s", m.Type)
 	}
 	if err != nil {
-		return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
+		return nil, fmt.Errorf("error in SetMetric: %v", err)
 	}
 
 	// get metric to check real value
-	metric, err := d.GetMetric(ctx, m.MType, m.ID)
+	metric, err := d.GetMetric(ctx, m.Type, m.ID)
 	if err != nil {
-		return metrics.Metrics{}, fmt.Errorf("error in SetMetric: %v", err)
+		return nil, fmt.Errorf("error in SetMetric: %v", err)
 	}
 	return metric, nil
 }
 
-func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
+func (d DB) SetMetrics(ctx context.Context, m []*metrics.Metric) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -113,12 +112,12 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 	defer gaugeStmt.Close()
 	defer counterStmt.Close()
 
-	for _, metric := range *m {
-		switch metric.MType {
-		case metrics.GaugeMType:
+	for _, metric := range m {
+		switch metric.Type {
+		case metrics.GaugeType:
 			_, err = gaugeStmt.ExecContext(ctx, metric.ID, *metric.Value)
-		case metrics.CounterMType:
-			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;", metric.MType, metric.ID)
+		case metrics.CounterType:
+			metricRow := tx.QueryRowContext(ctx, "SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;", metric.Type, metric.ID)
 			currentMetric, err2 := rowToMetric(metricRow)
 			if err2 == nil {
 				// plus current delta
@@ -126,7 +125,7 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 			}
 			_, err = counterStmt.ExecContext(ctx, metric.ID, *metric.Delta)
 		default:
-			err = fmt.Errorf("unknown metric type: %s", metric.MType)
+			err = fmt.Errorf("unknown metric type: %s", metric.Type)
 		}
 		if err != nil {
 			if err = tx.Rollback(); err != nil {
@@ -143,7 +142,7 @@ func (d DB) SetMetrics(ctx context.Context, m *[]metrics.Metrics) error {
 	return nil
 }
 
-func (d DB) GetMetric(ctx context.Context, type_, name string) (metrics.Metrics, error) {
+func (d DB) GetMetric(ctx context.Context, type_ string, name string) (*metrics.Metric, error) {
 	row := d.db.QueryRowContext(
 		ctx,
 		"SELECT id, type, value, delta FROM metrics WHERE type = $1 AND id = $2 LIMIT 1;",
@@ -153,18 +152,17 @@ func (d DB) GetMetric(ctx context.Context, type_, name string) (metrics.Metrics,
 	return rowToMetric(row)
 }
 
-func rowToMetric(row *sql.Row) (metrics.Metrics, error) {
-	res := metrics.Metrics{}
+func rowToMetric(row *sql.Row) (*metrics.Metric, error) {
+	res := metrics.Metric{}
 	var gaugeValue sql.NullFloat64
 	var counterValue sql.NullInt64
 	if err := row.Err(); err != nil {
-		return metrics.Metrics{}, err
+		return nil, err
 	}
-	err := row.Scan(&res.ID, &res.MType, &gaugeValue, &counterValue)
+	err := row.Scan(&res.ID, &res.Type, &gaugeValue, &counterValue)
 	if err != nil {
-		return metrics.Metrics{}, fmt.Errorf("error in rowToMetric: %v", err)
+		return nil, fmt.Errorf("error in rowToMetric: %v", err)
 	}
-
 	if gaugeValue.Valid {
 		res.Value = &gaugeValue.Float64
 	}
@@ -172,20 +170,20 @@ func rowToMetric(row *sql.Row) (metrics.Metrics, error) {
 		res.Delta = &counterValue.Int64
 	}
 
-	return res, nil
+	return &res, nil
 }
 
-func (d DB) GetAllMetrics(ctx context.Context) (res []metrics.Metrics, err error) {
+func (d DB) GetAllMetrics(ctx context.Context) (res []metrics.Metric, err error) {
 	rows, err := d.db.QueryContext(ctx, "SELECT id, type, value, delta FROM metrics;")
 	if err != nil {
 		return nil, fmt.Errorf("error in GetAllMetrics: %v", err)
 	}
 
 	for rows.Next() {
-		var m metrics.Metrics
+		var m metrics.Metric
 		var gaugeValue sql.NullFloat64
 		var counterValue sql.NullInt64
-		err = rows.Scan(&m.ID, &m.MType, &gaugeValue, &counterValue)
+		err = rows.Scan(&m.ID, &m.Type, &gaugeValue, &counterValue)
 		if err != nil {
 			return nil, fmt.Errorf("error in GetAllMetrics: %v", err)
 		}
@@ -214,14 +212,14 @@ func (d DB) GetMappedByTypeAndNameMetrics(ctx context.Context) (map[string]map[s
 	}
 
 	for _, m := range allMetrics {
-		_, ok := res[m.MType]
+		_, ok := res[m.Type]
 		if !ok {
-			res[m.MType] = make(map[string]interface{})
+			res[m.Type] = make(map[string]interface{})
 		}
-		if m.MType == metrics.GaugeMType {
-			res[m.MType][m.ID] = *m.Value
-		} else if m.MType == metrics.CounterMType {
-			res[m.MType][m.ID] = *m.Delta
+		if m.Type == metrics.GaugeType {
+			res[m.Type][m.ID] = *m.Value
+		} else if m.Type == metrics.CounterType {
+			res[m.Type][m.ID] = *m.Delta
 		}
 	}
 	return res, nil

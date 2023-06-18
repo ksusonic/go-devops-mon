@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	metricspb "github.com/ksusonic/go-devops-mon/proto/metrics"
 )
 
 type Service struct {
@@ -20,25 +21,38 @@ func NewService(key string) *Service {
 	return &Service{key: keyPtr}
 }
 
-func (s Service) SetHash(m *metrics.Metrics) error {
+func (s Service) SetHashProto(m *metricspb.Metric) error {
 	if s.key == nil {
 		return nil
 	}
 
-	hash, err := s.hash(*s.key, m)
+	h, err := hash(*s.key, m)
 	if err != nil {
 		return err
 	}
-	m.Hash = hash
+	m.Hash = h
 	return nil
 }
 
-func (s Service) ValidateHash(m *metrics.Metrics) error {
+func (s Service) SetHash(m *metrics.Metric) error {
 	if s.key == nil {
 		return nil
 	}
 
-	hash, err := s.hash(*s.key, m)
+	h, err := hash(*s.key, m)
+	if err != nil {
+		return err
+	}
+	m.Hash = h
+	return nil
+}
+
+func (s Service) ValidateHash(m *metrics.Metric) error {
+	if s.key == nil {
+		return nil
+	}
+
+	hash, err := hash(*s.key, m)
 	if err != nil {
 		return err
 	}
@@ -49,14 +63,30 @@ func (s Service) ValidateHash(m *metrics.Metrics) error {
 	return nil
 }
 
-func (s Service) hash(key string, m *metrics.Metrics) (hash string, err error) {
-	switch m.MType {
-	case metrics.CounterMType:
-		hash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
-	case metrics.GaugeMType:
-		hash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
+func (s Service) ValidateHashProto(m *metricspb.Metric) error {
+	if s.key == nil {
+		return nil
+	}
+
+	hash, err := hash(*s.key, m)
+	if err != nil {
+		return err
+	}
+
+	if hash != m.Hash {
+		return fmt.Errorf("hash is not correct:\nexpected:'%s'\nactual:'%s'", hash, m.Hash)
+	}
+	return nil
+}
+
+func hash[M metrics.GenericMetric](key string, m M) (hash string, err error) {
+	switch m.GetType() {
+	case metricspb.MetricType_counter:
+		hash = fmt.Sprintf("%s:counter:%d", m.GetID(), m.GetDelta())
+	case metricspb.MetricType_gauge:
+		hash = fmt.Sprintf("%s:gauge:%f", m.GetID(), m.GetValue())
 	default:
-		return "", fmt.Errorf("cannot calc hash of type %s", m.MType)
+		return "", fmt.Errorf("cannot calc hash of type %s", m.GetID())
 	}
 	h := hmac.New(sha256.New, []byte(key))
 	_, err = h.Write([]byte(hash))

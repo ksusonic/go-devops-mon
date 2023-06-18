@@ -12,15 +12,16 @@ import (
 )
 
 type Config struct {
-	Address                  string        `env:"ADDRESS"`
-	FileDropInterval         string        `env:"STORE_INTERVAL"`
-	FileDropIntervalDuration time.Duration `env:"-"`
-	StoreFile                string        `env:"STORE_FILE"`
-	RestoreFile              bool          `env:"RESTORE"`
-	SecretKey                string        `env:"KEY"`
-	DatabaseURL              string        `env:"DATABASE_DSN"`
-	Debug                    bool          `env:"DEBUG"`
-	CryptoKeyPath            string        `env:"CRYPTO_KEY"`
+	Address                  string        `json:"address" env:"ADDRESS"`
+	FileDropInterval         string        `json:"file_drop_interval" env:"STORE_INTERVAL"`
+	FileDropIntervalDuration time.Duration `json:"-" env:"-"`
+	StoreFile                string        `json:"store_file" env:"STORE_FILE"`
+	RestoreFile              bool          `json:"restore_file" env:"RESTORE"`
+	SecretKey                string        `json:"key" env:"KEY"`
+	DatabaseURL              string        `json:"database_dsn" env:"DATABASE_DSN"`
+	Debug                    bool          `json:"debug" env:"DEBUG"`
+	CryptoKeyPath            string        `json:"crypto_key" env:"CRYPTO_KEY"`
+	TrustedSubnet            string        `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
 }
 
 func NewConfig() (*Config, error) {
@@ -46,6 +47,7 @@ func NewConfig() (*Config, error) {
 	flag.BoolVar(&cfg.Debug, "debug", false, "debug mode")
 	flag.StringVar(&cfg.SecretKey, "k", "", "key for metric hash")
 	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "", "private key for tls")
+	flag.StringVar(&cfg.TrustedSubnet, "t", "", "trusted subnets")
 
 	flag.Parse()
 

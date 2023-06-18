@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ksusonic/go-devops-mon/internal/metrics"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/ksusonic/go-devops-mon/internal/metrics"
+	metricspb "github.com/ksusonic/go-devops-mon/proto/metrics"
 	"go.uber.org/zap"
 )
 
@@ -17,15 +17,23 @@ type DecodeService interface {
 	DecryptBytes(b []byte) ([]byte, error)
 }
 
+type HashService interface {
+	// SetHash Calculates hash for metric
+	SetHash(m *metrics.Metric) error
+	// ValidateHash Returns bool if calculated and metric hash is correct
+	ValidateHash(m *metrics.Metric) error
+	ValidateHashProto(m *metricspb.Metric) error
+}
+
 type Controller struct {
 	Logger  *zap.Logger
 	Storage metrics.ServerMetricStorage
 
-	hashService metrics.HashService
+	hashService HashService
 	decoder     DecodeService
 }
 
-func NewMetricController(logger *zap.Logger, storage metrics.ServerMetricStorage, hashService metrics.HashService) *Controller {
+func NewMetricController(logger *zap.Logger, storage metrics.ServerMetricStorage, hashService HashService) *Controller {
 	return &Controller{
 		Logger:      logger,
 		Storage:     storage,
@@ -37,16 +45,15 @@ func (c *Controller) Router() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use()
+	router.Get("/ping", c.PingHandler)
 	router.Get("/value/{type}/{name}", c.GetMetricPathHandler)
-	router.Get("/", c.GetAllMetricsHandler)
-
 	router.Post("/update/{type}/{name}/{value}", c.UpdateMetricPathHandler)
 
+	// These handlers are grpc-supported. TODO: union handlers
+	router.Get("/", c.GetAllMetricsHandler)
 	router.Post("/update/", c.UpdateMetricHandler)
 	router.Post("/updates/", c.UpdatesMetricHandler)
 	router.Post("/value/", c.GetMetricHandler)
-
-	router.Get("/ping", c.PingHandler)
 
 	return router
 }
@@ -61,10 +68,10 @@ func (c *Controller) GetMetricPathHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var stringValue string
-	if reqType == metrics.CounterMType {
-		stringValue = strconv.FormatInt(*value.Delta, 10)
+	if reqType == metrics.CounterType {
+		stringValue = strconv.FormatInt(value.GetDelta(), 10)
 	} else {
-		stringValue = strconv.FormatFloat(*value.Value, 'f', -1, 64)
+		stringValue = strconv.FormatFloat(value.GetValue(), 'f', -1, 64)
 	}
 	_, err = w.Write([]byte(stringValue))
 	if err != nil {
@@ -74,19 +81,19 @@ func (c *Controller) GetMetricPathHandler(w http.ResponseWriter, r *http.Request
 
 // GetMetricHandler - get metric by body in post request
 func (c *Controller) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
-	m := &metrics.Metrics{}
+	m := &metrics.Metric{}
 	if err := render.Bind(r, m); err != nil {
 		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
 	}
 
-	value, err := c.Storage.GetMetric(r.Context(), m.MType, m.ID)
+	value, err := c.Storage.GetMetric(r.Context(), m.Type, m.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	err = c.hashService.SetHash(&value)
+	err = c.hashService.SetHash(value)
 	if err != nil {
 		c.Logger.Error("error setting hash", zap.Error(err))
 		return
@@ -128,15 +135,15 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 	reqName := chi.URLParam(r, "name")
 	reqRawValue := chi.URLParam(r, "value")
 
-	if reqType == metrics.GaugeMType {
+	if reqType == metrics.GaugeType {
 		value, err := strconv.ParseFloat(reqRawValue, 64)
 		if err != nil {
 			render.Render(w, r, ErrBadRequest(err, c.Logger))
 			return
 		}
-		m := metrics.Metrics{
+		m := metrics.Metric{
 			ID:    reqName,
-			MType: reqType,
+			Type:  metrics.GaugeType,
 			Value: &value,
 		}
 		if err = c.hashService.SetHash(&m); err != nil {
@@ -144,20 +151,20 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
+		if _, err = c.Storage.SetMetric(r.Context(), &m); err != nil {
 			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
 		c.Logger.Info("Updated gauge", zap.String("id", reqName), zap.Float64("value", value))
-	} else if reqType == metrics.CounterMType {
+	} else if reqType == metrics.CounterType {
 		value, err := strconv.ParseInt(reqRawValue, 10, 64)
 		if err != nil {
 			c.Logger.Error("incorrect value", zap.String("value", reqRawValue))
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		m := metrics.Metrics{
+		m := metrics.Metric{
 			ID:    reqName,
-			MType: reqType,
+			Type:  metrics.CounterType,
 			Delta: &value,
 		}
 		if err = c.hashService.SetHash(&m); err != nil {
@@ -165,7 +172,7 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if _, err = c.Storage.SetMetric(r.Context(), m); err != nil {
+		if _, err = c.Storage.SetMetric(r.Context(), &m); err != nil {
 			render.Render(w, r, ErrInternalError(err, c.Logger))
 			return
 		}
@@ -176,9 +183,9 @@ func (c *Controller) UpdateMetricPathHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// UpdateMetricHandler — updates metric by Metrics data in body
+// UpdateMetricHandler — updates metric by Metric data in body
 func (c *Controller) UpdateMetricHandler(w http.ResponseWriter, r *http.Request) {
-	m := &metrics.Metrics{}
+	m := &metrics.Metric{}
 	if err := render.Bind(r, m); err != nil {
 		render.Render(w, r, ErrBadRequest(err, c.Logger))
 		return
@@ -189,11 +196,11 @@ func (c *Controller) UpdateMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if m.MType != metrics.GaugeMType && m.MType != metrics.CounterMType {
+	if m.Type != metrics.GaugeType && m.Type != metrics.CounterType {
 		w.WriteHeader(http.StatusNotImplemented)
-		c.Logger.Error("unexpected metric type", zap.String("type", m.MType))
+		c.Logger.Error("unexpected metric type", zap.String("type", m.Type))
 	} else {
-		resultMetric, err := c.Storage.SetMetric(r.Context(), *m)
+		resultMetric, err := c.Storage.SetMetric(r.Context(), m)
 		if err != nil {
 			c.Logger.Error("error while setting metric", zap.Error(err))
 			return
@@ -213,14 +220,14 @@ func (c *Controller) UpdateMetricHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// UpdatesMetricHandler — updates metric by []Metrics data in body
+// UpdatesMetricHandler — updates metric by []Metric data in body
 func (c *Controller) UpdatesMetricHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		c.Logger.Error("could not read request body", zap.Error(err))
 		return
 	}
-	var metricSlice []metrics.Metrics
+	var metricSlice []*metrics.Metric
 	err = json.Unmarshal(body, &metricSlice)
 	if err != nil {
 		c.Logger.Error("error unmarshalling metric slice", zap.Error(err))
@@ -228,13 +235,13 @@ func (c *Controller) UpdatesMetricHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	for _, m := range metricSlice {
-		if err := c.hashService.ValidateHash(&m); err != nil {
+		if err := c.hashService.ValidateHash(m); err != nil {
 			render.Render(w, r, ErrBadRequest(err, c.Logger))
 			return
 		}
 	}
 
-	err = c.Storage.SetMetrics(r.Context(), &metricSlice)
+	err = c.Storage.SetMetrics(r.Context(), metricSlice)
 	if err != nil {
 		c.Logger.Error("error setting metric", zap.Error(err))
 		render.Render(w, r, ErrInternalError(err, c.Logger))
